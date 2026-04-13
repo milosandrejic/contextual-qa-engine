@@ -1,0 +1,9 @@
+services:
+  api:
+    build: .
+    ports:
+      - "9000:9000"
+    volumes:
+      - .:/code
+    env_file:
+      - .env

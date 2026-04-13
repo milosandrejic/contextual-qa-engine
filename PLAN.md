@@ -9,12 +9,14 @@
 
 ## Phase 0 — Project Setup
 
-- [ ] Initialize Python project with `uv` (fast, modern package manager)
-- [ ] Set up project structure (routers, services, models, core)
-- [ ] Configure environment variables with `pydantic-settings`
-- [ ] Set up FastAPI app with health check endpoint
-- [ ] Add `.env.example` with required keys (OpenAI, etc.)
-- [ ] Add `.gitignore`
+- [x] Initialize Python project
+- [x] Set up project structure (routers, services, models, core)
+- [x] Configure environment variables with `pydantic-settings`
+- [x] Set up FastAPI app with health check endpoint
+- [x] Add `.env.example` with required keys (OpenAI, etc.)
+- [x] Add `.gitignore`
+- [x] Dockerize from the start (`Dockerfile` + `docker-compose.yml`)
+- [x] Add `Makefile` with common commands (up, down, logs, etc.)
 
 ## Phase 1 — Document Ingestion (Manual)
 
@@ -103,7 +105,6 @@
 
 ## Phase 9 — Production Hardening
 
-- [ ] Dockerize the application
 - [ ] Add PostgreSQL for metadata & chat history persistence
 - [ ] Add Redis for caching frequent queries / embeddings
 - [ ] Rate limiting & input validation
