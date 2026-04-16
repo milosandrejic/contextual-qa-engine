@@ -20,14 +20,14 @@
 
 ## Phase 1 — Document Ingestion (Manual)
 
-- [ ] Build document loader for `.txt` files (plain Python file reading)
-- [ ] Add PDF loader with `pypdf` (extract text page by page)
-- [ ] Implement chunking manually (fixed-size with overlap, split on sentences)
-- [ ] Understand why chunk size & overlap matter (experiment with values)
-- [ ] Add chunk metadata (source file, chunk index, page number)
-- [ ] Create `/upload` endpoint that accepts files
-- [ ] Handle bad uploads (corrupt PDFs, empty files, unsupported formats)
-- [ ] Store raw files locally (later: S3/cloud)
+- [x] Build document loader for `.txt` files (plain Python file reading)
+- [x] Add PDF loader with `pypdf` (extract text page by page)
+- [x] Implement chunking manually (fixed-size with overlap, split on sentences)
+- [x] Understand why chunk size & overlap matter (experiment with values)
+- [x] Add chunk metadata (source file, chunk index, page number)
+- [x] Create `/upload` endpoint that accepts files
+- [x] Handle bad uploads (corrupt PDFs, empty files, unsupported formats)
+- [x] Store raw files locally (later: S3/cloud)
 
 ## Phase 2 — Embeddings & Vector Store (Manual)
 
