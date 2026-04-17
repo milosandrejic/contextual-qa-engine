@@ -1,7 +1,11 @@
 import chromadb
+from app.core.config import settings
 
-CHROMA_DIR = "chroma_data"
 COLLECTION_NAME = "documents"
 
-client = chromadb.PersistentClient(path=CHROMA_DIR)
+client = chromadb.CloudClient(
+    api_key=settings.chroma_api_key,
+    tenant=settings.chroma_tenant,
+    database=settings.chroma_database,
+)
 collection = client.get_or_create_collection(name=COLLECTION_NAME)

@@ -14,5 +14,9 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     openai_embedding_model: str = "text-embedding-3-small"
 
+    chroma_api_key: str = ""
+    chroma_tenant: str = ""
+    chroma_database: str = ""
+
 
 settings = Settings()
