@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.services.document_loader import load_txt, load_pdf
 from app.services.chunker import chunk_text
+from app.services.vector_store import store_chunks
 
 router = APIRouter()
 
@@ -69,9 +70,12 @@ def upload_document(file: UploadFile = File(...)):
     with open(chunks_file, "w") as f:
         json.dump(chunks, f, indent=2)
 
+    stored = store_chunks(chunks)
+
     return {
         "filename": file.filename,
         "chunks": len(chunks),
+        "stored_in_vector_db": stored,
         "chunks_file": str(chunks_file),
         "sample": chunks[:2] if chunks else [],
     }

@@ -34,10 +34,10 @@
 - [x] Call OpenAI embeddings API directly (`openai.embeddings.create`)
 - [x] Understand what embeddings are and what the response looks like
 - [x] Set up ChromaDB as local vector store
-- [ ] Store chunks + embeddings + metadata in Chroma manually
-- [ ] Store embeddings as vectors and understand dimensionality
-- [ ] Build retrieval service: embed query → cosine similarity → top-k chunks
-- [ ] Create `/search` endpoint to test retrieval standalone
+- [x] Store chunks + embeddings + metadata in Chroma manually
+- [x] Store embeddings as vectors and understand dimensionality
+- [x] Build retrieval service: embed query → cosine similarity → top-k chunks
+- [x] Create `/search` endpoint to test retrieval standalone
 
 ## Phase 3 — RAG Pipeline (Manual MVP)
 
