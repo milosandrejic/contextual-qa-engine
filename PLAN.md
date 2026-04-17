@@ -31,8 +31,8 @@
 
 ## Phase 2 — Embeddings & Vector Store (Manual)
 
-- [ ] Call OpenAI embeddings API directly (`openai.embeddings.create`)
-- [ ] Understand what embeddings are and what the response looks like
+- [x] Call OpenAI embeddings API directly (`openai.embeddings.create`)
+- [x] Understand what embeddings are and what the response looks like
 - [ ] Set up ChromaDB as local vector store
 - [ ] Store chunks + embeddings + metadata in Chroma manually
 - [ ] Store embeddings as vectors and understand dimensionality
