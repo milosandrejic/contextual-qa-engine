@@ -6,3 +6,6 @@ pypdf==6.10.2
 python-multipart==0.0.26
 openai==2.32.0
 chromadb==1.5.8
+sqlalchemy[asyncio]==2.0.41
+asyncpg==0.30.0
+alembic==1.15.2

@@ -49,21 +49,31 @@
 - [x] Create `/ask` endpoint (return answer + source documents in response)
 - [x] Test end-to-end: upload doc → ask question → get answer
 
-## Phase 5 — Conversation & UX (Manual)
+## Phase 4 — Conversation & UX
 
-- [ ] Implement chat history storage (in-memory dict per session)
-- [ ] Prepend conversation history to prompt manually
-- [ ] Handle follow-up questions (use history to resolve "it", "that", etc.)
-- [ ] Implement streaming with OpenAI `stream=True` + FastAPI `StreamingResponse`
-- [ ] Limit conversation history (sliding window / token budget)
-- [ ] Add citation system (track which chunks were used, return source references)
-- [ ] Better prompt engineering (few-shot examples, guardrails)
+### 4a — Database Setup
+- [ ] Add PostgreSQL service to `docker-compose.yml` + persistent volume
+- [ ] Add `sqlalchemy[asyncio]`, `asyncpg`, `alembic` to requirements
+- [ ] Add `DATABASE_URL` to config + `.env.example`
+- [ ] Create `app/core/database.py` (async engine, session factory, `get_db` dependency)
+- [ ] Create SQLAlchemy models: `Session` + `Message` (with JSONB sources/usage)
+- [ ] Init Alembic, configure for async, generate first migration
+
+### 4b — Session & History Endpoints
+- [ ] Create session management endpoints (`POST /sessions`, `GET /sessions`, `GET /sessions/{id}/history`, `DELETE /sessions/{id}`)
+- [ ] Update `/ask` to accept optional `session_id` — load history, save Q&A to DB
+- [ ] Convert `ask.py` to async (for async DB sessions)
+
+### 4c — Conversation Quality
+- [ ] Prepend conversation history to prompt (follow-up questions, resolve "it", "that", etc.)
+- [ ] Limit conversation history (sliding window — last N messages)
+- [ ] Add citation system (LLM uses [1], [2] format, return numbered sources)
 
 ---
 
 # Part B — LangChain / LangGraph Upgrade
 
-## Phase 6 — Migrate to LangChain
+## Phase 5 — Migrate to LangChain
 
 - [ ] Replace manual document loaders with LangChain loaders
 - [ ] Replace manual chunking with `RecursiveCharacterTextSplitter`
@@ -74,7 +84,7 @@
 - [ ] Add retrieval tuning: metadata filtering, MMR, chunk size/overlap config
 - [ ] Add advanced retrieval: reranking, hybrid search (BM25 + vector), query rewriting
 
-## Phase 7 — Evaluation & Observability
+## Phase 6 — Evaluation & Observability
 
 - [ ] Log all queries, retrieved chunks, and responses
 - [ ] Add evaluation with RAGAS (faithfulness, relevance, context precision)
@@ -84,16 +94,15 @@
 - [ ] Cost monitoring (LLM + embeddings usage)
 - [ ] Prompt versioning
 
-## Phase 8 — Agent Layer (LangGraph)
+## Phase 7 — Agent Layer (LangGraph)
 
 - [ ] Build retrieval agent with LangGraph (decides if/how to retrieve)
 - [ ] Add tool-calling: `search_docs`, `get_metadata`, `summarize_doc`
 - [ ] Multi-step QA agent (plan → retrieve → answer → verify)
 - [ ] Retry / fallback logic when retrieval quality is low
 
-## Phase 9 — Production Hardening
+## Phase 8 — Production Hardening
 
-- [ ] Add PostgreSQL for metadata & chat history persistence
 - [ ] Add Redis for caching frequent queries / embeddings
 - [ ] Rate limiting & input validation
 - [ ] Migrate to Pinecone or Weaviate (managed vector DB)

@@ -18,5 +18,7 @@ class Settings(BaseSettings):
     chroma_tenant: str = ""
     chroma_database: str = ""
 
+    database_url: str = ""
+
 
 settings = Settings()
