@@ -41,14 +41,13 @@
 
 ## Phase 3 — RAG Pipeline (Manual MVP)
 
-- [ ] Build the full pipeline manually: retrieve → build prompt → call LLM
-- [ ] Create `/ask` endpoint
-- [ ] Design system prompt template with `{context}` and `{question}` placeholders
-- [ ] Call OpenAI chat completions API directly with injected context
-- [ ] Return answer + source documents in response
-- [ ] Add "I don't know" handling (instruct LLM in prompt to say so when context is insufficient)
-- [ ] Measure token usage per request
-- [ ] Test end-to-end: upload doc → ask question → get answer
+- [x] Design system prompt template with `{context}` and `{question}` placeholders
+- [x] Add "I don't know" handling (instruct LLM in prompt to say so when context is insufficient)
+- [x] Call OpenAI chat completions API directly with injected context
+- [x] Measure token usage per request
+- [x] Build the full pipeline manually: retrieve → build prompt → call LLM
+- [x] Create `/ask` endpoint (return answer + source documents in response)
+- [x] Test end-to-end: upload doc → ask question → get answer
 
 ## Phase 4a — Retrieval Tuning (Manual)
 
