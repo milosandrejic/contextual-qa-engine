@@ -49,19 +49,6 @@
 - [x] Create `/ask` endpoint (return answer + source documents in response)
 - [x] Test end-to-end: upload doc → ask question → get answer
 
-## Phase 4a — Retrieval Tuning (Manual)
-
-- [ ] Tune chunk size & overlap, observe impact on answer quality
-- [ ] Add metadata filtering to retrieval (filter by source, date, etc.)
-- [ ] Implement Max Marginal Relevance (MMR) to reduce duplicate chunks
-
-## Phase 4b — Advanced Retrieval (Manual)
-
-- [ ] Implement basic reranking (retrieve top 10 → score with LLM → return top 3)
-- [ ] Add keyword search with simple TF-IDF/BM25 (`rank-bm25` package)
-- [ ] Combine vector + keyword results manually (hybrid search)
-- [ ] Implement query rewriting (call LLM to rewrite vague queries before retrieval)
-
 ## Phase 5 — Conversation & UX (Manual)
 
 - [ ] Implement chat history storage (in-memory dict per session)
@@ -84,6 +71,8 @@
 - [ ] Replace manual RAG pipeline with LangChain's chain (retriever → prompt → LLM)
 - [ ] Compare: what LangChain adds vs. what you built manually
 - [ ] Integrate LangSmith for tracing & debugging chains
+- [ ] Add retrieval tuning: metadata filtering, MMR, chunk size/overlap config
+- [ ] Add advanced retrieval: reranking, hybrid search (BM25 + vector), query rewriting
 
 ## Phase 7 — Evaluation & Observability
 
