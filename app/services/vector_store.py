@@ -15,7 +15,10 @@ collection = client.get_or_create_collection(name=COLLECTION_NAME)
 
 def store_chunks(chunks: list[dict]) -> int:
     texts = [chunk["text"] for chunk in chunks]
-    metadatas = [chunk["metadata"] for chunk in chunks]
+    metadatas = [
+        {k: v for k, v in chunk["metadata"].items() if v is not None}
+        for chunk in chunks
+    ]
     ids = [str(uuid.uuid4()) for _ in chunks]
 
     embeddings = get_embeddings(texts)
