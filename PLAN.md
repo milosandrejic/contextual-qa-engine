@@ -60,12 +60,12 @@
 - [x] Init Alembic, configure for async, generate first migration
 
 ### 4b — Session & History Endpoints
-- [ ] Create session management endpoints (`POST /sessions`, `GET /sessions`, `GET /sessions/{id}/history`, `DELETE /sessions/{id}`)
+- [x] Create session management endpoints (`POST /sessions`, `GET /sessions`, `GET /sessions/{id}/history`, `DELETE /sessions/{id}`)
 - [ ] Update `/ask` to accept optional `session_id` — load history, save Q&A to DB
 - [ ] Convert `ask.py` to async (for async DB sessions)
 
 ### 4c — Conversation Quality
-- [ ] Prepend conversation history to prompt (follow-up questions, resolve "it", "that", etc.)
+- [ ] Prepend conversation history to prompt (1follow-up questions, resolve "it", "that", etc.)
 - [ ] Limit conversation history (sliding window — last N messages)
 - [ ] Add citation system (LLM uses [1], [2] format, return numbered sources)
 
