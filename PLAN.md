@@ -52,12 +52,12 @@
 ## Phase 4 — Conversation & UX
 
 ### 4a — Database Setup
-- [ ] Add PostgreSQL service to `docker-compose.yml` + persistent volume
-- [ ] Add `sqlalchemy[asyncio]`, `asyncpg`, `alembic` to requirements
-- [ ] Add `DATABASE_URL` to config + `.env.example`
-- [ ] Create `app/core/database.py` (async engine, session factory, `get_db` dependency)
-- [ ] Create SQLAlchemy models: `Session` + `Message` (with JSONB sources/usage)
-- [ ] Init Alembic, configure for async, generate first migration
+- [x] Add PostgreSQL service to `docker-compose.yml` + persistent volume
+- [x] Add `sqlalchemy[asyncio]`, `asyncpg`, `alembic` to requirements
+- [x] Add `DATABASE_URL` to config + `.env.example`
+- [x] Create `app/core/database.py` (async engine, session factory, `get_db` dependency)
+- [x] Create SQLAlchemy models: `Session` + `Message` (with JSONB sources/usage)
+- [x] Init Alembic, configure for async, generate first migration
 
 ### 4b — Session & History Endpoints
 - [ ] Create session management endpoints (`POST /sessions`, `GET /sessions`, `GET /sessions/{id}/history`, `DELETE /sessions/{id}`)

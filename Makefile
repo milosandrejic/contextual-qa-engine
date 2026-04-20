@@ -1,4 +1,4 @@
-.PHONY: up down build logs restart shell
+.PHONY: up down build logs restart shell migration-up migration-down migration-create
 
 up:
 	docker compose up -d
@@ -17,3 +17,12 @@ restart:
 
 shell:
 	docker compose exec api bash
+
+migration-up:
+	docker compose exec api alembic upgrade head
+
+migration-down:
+	docker compose exec api alembic downgrade -1
+
+migration-create:
+	docker compose exec api alembic revision -m "$(name)"
