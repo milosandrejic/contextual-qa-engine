@@ -212,29 +212,27 @@ from langchain_core.messages import AIMessage, HumanMessage; from langchain_open
 
 ## Whitespace & Formatting
 
-**Code must have space to breathe.** Blank lines group related logic and make flow obvious.
+**Code must have space to breathe.** Blank lines group related logic and make flow obvious. **Maximum 1 blank line anywhere—no stacking.**
 
 ### Spacing Rules
 
-1. **Between function definitions:** 2 blank lines
+1. **Between function definitions:** 1 blank line
 2. **Between logical sections inside a function:** 1 blank line
 3. **Before return statements:** 1 blank line
 4. **Around loops/conditions:** 1 blank line before and after
-5. **Group related variables with blank lines between groups**
+5. **Never stack blank lines** (no `\n\n\n`)
+6. **Group related variables with blank lines between groups**
 
-### Good (Proper breathing room)
+### Good (Proper breathing room, max 1 blank)
 ```python
 def generate_answer(context: str, question: str, history: list[dict] | None = None) -> dict:
     """Generate LLM answer from context and question."""
-
-    # Initialize response
     response = qa_chain.invoke({
         "context": context,
         "question": question,
         "history": _build_chat_history_messages(history),
     })
 
-    # Extract token usage
     prompt_tokens = 0
     completion_tokens = 0
     total_tokens = 0
@@ -246,7 +244,6 @@ def generate_answer(context: str, question: str, history: list[dict] | None = No
         completion_tokens = response.usage_metadata.get("output_tokens", 0)
         total_tokens = response.usage_metadata.get("total_tokens", 0)
 
-    # Build response
     return {
         "answer": response.content,
         "usage": {
@@ -256,39 +253,44 @@ def generate_answer(context: str, question: str, history: list[dict] | None = No
         },
     }
 
-
 def load_session(db: AsyncSession, session_id: UUID) -> Session:
     """Load session from database."""
     session = await db.get(Session, session_id)
 
     return session
-
-
-def save_message(db: AsyncSession, message: Message) -> None:
-    """Persist message to database."""
-    db.add(message)
-
-    await db.commit()
 ```
 
-### Bad (Dense, hard to scan)
+### Bad (Stacked blank lines, dense sections)
 ```python
 def generate_answer(context: str, question: str, history: list[dict] | None = None) -> dict:
-    response = qa_chain.invoke({"context": context, "question": question, "history": _build_chat_history_messages(history)})
+
+
+    response = qa_chain.invoke({...})
+
+
     prompt_tokens = 0
     completion_tokens = 0
     total_tokens = 0
+
+
     has_usage_data = hasattr(response, "usage_metadata") and response.usage_metadata
     if has_usage_data:
         prompt_tokens = response.usage_metadata.get("input_tokens", 0)
+
+
         completion_tokens = response.usage_metadata.get("output_tokens", 0)
-        total_tokens = response.usage_metadata.get("total_tokens", 0)
-    return {"answer": response.content, "usage": {"prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens, "total_tokens": total_tokens}}
+    return {...}
+
+
+
+def load_session(db: AsyncSession, session_id: UUID) -> Session:
+    session = await db.get(Session, session_id)
+    return session
 ```
 
 ### More Examples: Loops & Conditionals
 
-Good (clear sections):
+Good (clear sections, max 1 blank):
 ```python
 def build_history_aware_query(question: str, history: list[dict], max_messages: int = 6) -> str:
     if not history:
@@ -316,7 +318,7 @@ def build_history_aware_query(question: str, history: list[dict], max_messages: 
     return "\n".join(query_parts)
 ```
 
-Bad (dense loop, no breathing room):
+Bad (dense, no breathing):
 ```python
 def build_history_aware_query(question: str, history: list[dict], max_messages: int = 6) -> str:
     if not history:

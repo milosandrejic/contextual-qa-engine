@@ -15,10 +15,9 @@ def build_history_aware_query(question: str, history: list[dict], max_messages: 
     if not history_lines:
         return question
 
-    query_parts = [
-        "Use this conversation context to resolve references in the current question:",
-    ]
-    query_parts.extend(history_lines)
-    query_parts.append(f"current_question: {question}")
+    formatted_history = "\n".join(history_lines)
 
-    return "\n".join(query_parts)
+    instruction = "Use this conversation context to resolve references in the current question:"
+    retrieval_query = f"{instruction}\n\n{formatted_history}\ncurrent_question: {question}"
+
+    return retrieval_query

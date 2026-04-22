@@ -12,6 +12,14 @@ class SearchRequest(BaseModel):
 
 @router.post("/search")
 def search_documents(request: SearchRequest):
+    """Search for documents in the vector store by semantic similarity.
+    
+    Args:
+        request: SearchRequest with 'query' string and optional 'top_k' (default 5).
+    
+    Returns:
+        Dict with query and results list (each with text, metadata, distance).
+    """
     results = search_chunks(query=request.query, top_k=request.top_k)
 
     return {

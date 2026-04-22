@@ -19,6 +19,20 @@ ALLOWED_EXTENSIONS = {".txt", ".pdf"}
 
 @router.post("/upload")
 def upload_document(file: UploadFile = File(...)):
+    """Upload and process a document (.txt or .pdf).
+    
+    Validates file type, saves to disk, extracts and chunks text, stores in vector DB.
+    Returns chunk metadata and a sample of the chunks created.
+    
+    Args:
+        file: Uploaded file object.
+    
+    Returns:
+        Dict with filename, chunk count, vector DB storage status, chunks file path, and sample chunks.
+    
+    Raises:
+        HTTPException: 400 if filename missing, file type unsupported, file empty, or processing fails.
+    """
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided.")
 

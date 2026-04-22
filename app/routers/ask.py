@@ -13,17 +13,31 @@ from app.services.query_builder import build_history_aware_query
 
 router = APIRouter()
 
-
 class AskRequest(BaseModel):
     question: str
     top_k: int = 5
     session_id: uuid.UUID | None = None
 
-
 @router.post("/ask")
 async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
-    history: list[dict] = []
+    """Ask a question with optional session context and message persistence.
     
+    Retrieves session history if session_id provided, performs vector search with
+    history-aware query, generates answer with LLM, saves conversation to database.
+    
+    Args:
+        request: AskRequest with question, top_k, and optional session_id.
+        db: AsyncSession for database operations.
+    
+    Returns:
+        Dict with question, session_id, answer, sources (with citation numbers and metadata),
+        and token usage.
+    
+    Raises:
+        HTTPException: 404 if session_id provided but not found.
+    """
+    history: list[dict] = []
+
     if request.session_id:
         session = await chat_history.get_session(db, request.session_id)
 
@@ -61,6 +75,7 @@ async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
             role="user",
             content=request.question,
         )
+
         await chat_history.add_message(
             db=db,
             session_id=request.session_id,

@@ -15,6 +15,17 @@ Context:
 
 
 def build_context(chunks: list[dict]) -> str:
+    """Format ranked search results into a numbered context string for the LLM.
+    
+    Each chunk is numbered [1], [2], etc., with source and page info in header.
+    Chunks are separated by visual dividers (---) for clarity.
+    
+    Args:
+        chunks: List of dicts with 'text', 'metadata' keys from vector search.
+    
+    Returns:
+        Formatted context string ready for LLM prompts.
+    """
     formatted_chunks: list[str] = []
 
     for index, chunk in enumerate(chunks, start=1):
@@ -36,11 +47,24 @@ def build_context(chunks: list[dict]) -> str:
 
 
 def build_messages(context: str, question: str, history: list[dict] | None = None) -> list[dict]:
+    """Build a message list for API calls (system + history + user question).
+    
+    Injects formatted context into system prompt. Replays prior messages only if their
+    role is 'user' or 'assistant' (filters out malformed entries).
+    
+    Args:
+        context: Formatted context string from build_context().
+        question: User's question to append.
+        history: Optional list of prior message dicts with 'role' and 'content'.
+    
+    Returns:
+        List of message dicts ready for LLM APIs.
+    """
     messages = [{"role": "system", "content": SYSTEM_PROMPT.format(context=context)}]
 
     if history:
-        # Keep only valid conversational roles when replaying prior turns.
-        messages.extend(msg for msg in history if msg.get("role") in {"user", "assistant"})
+        valid_messages = [msg for msg in history if msg.get("role") in {"user", "assistant"}]
+        messages.extend(valid_messages)
 
     messages.append({"role": "user", "content": question})
 

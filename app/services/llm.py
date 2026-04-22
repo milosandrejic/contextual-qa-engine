@@ -32,8 +32,15 @@ qa_prompt_template = ChatPromptTemplate.from_messages([
 
 qa_chain = qa_prompt_template | chat_model
 
-
 def _build_chat_history_messages(history: list[dict] | None) -> list[HumanMessage | AIMessage]:
+    """Convert raw message dicts from database to LangChain message objects.
+    
+    Args:
+        history: List of message dicts with 'role' and 'content' keys, or None.
+    
+    Returns:
+        List of HumanMessage or AIMessage objects, empty if history is None.
+    """
     if not history:
         return []
 
@@ -48,14 +55,26 @@ def _build_chat_history_messages(history: list[dict] | None) -> list[HumanMessag
 
         if role == "user":
             messages.append(HumanMessage(content=content))
-
-        if role == "assistant":
+        elif role == "assistant":
             messages.append(AIMessage(content=content))
 
     return messages
 
 
 def generate_answer(context: str, question: str, history: list[dict] | None = None) -> dict:
+    """Generate an answer using LangChain's RAG chain with chat history.
+    
+    Invokes the QA chain with context, question, and formatted history.
+    Extracts token usage metrics from response if available.
+    
+    Args:
+        context: Formatted context string with citations for the LLM.
+        question: User's question to answer.
+        history: Optional list of prior message dicts for conversation context.
+    
+    Returns:
+        Dict with 'answer' string and 'usage' dict (prompt_tokens, completion_tokens, total_tokens).
+    """
     response = qa_chain.invoke({
         "context": context,
         "question": question,
