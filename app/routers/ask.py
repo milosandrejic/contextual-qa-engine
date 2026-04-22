@@ -19,6 +19,30 @@ class AskRequest(BaseModel):
     session_id: uuid.UUID | None = None
 
 
+def build_history_aware_query(question: str, history: list[dict], max_messages: int = 6) -> str:
+    if not history:
+        return question
+
+    recent_history = history[-max_messages:]
+    history_lines: list[str] = []
+
+    for message in recent_history:
+        role = message.get("role")
+        content = message.get("content")
+
+        if role in {"user", "assistant"} and content:
+            history_lines.append(f"{role}: {content}")
+
+    if not history_lines:
+        return question
+
+    return "\n".join([
+        "Use this conversation context to resolve references in the current question:",
+        *history_lines,
+        f"current_question: {question}",
+    ])
+
+
 @router.post("/ask")
 async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
     history: list[dict] = []
@@ -35,7 +59,9 @@ async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
             limit=settings.max_history_messages,
         )
 
-    chunks = await asyncio.to_thread(search_chunks, query=request.question, top_k=request.top_k)
+    retrieval_query = build_history_aware_query(request.question, history)
+
+    chunks = await asyncio.to_thread(search_chunks, query=retrieval_query, top_k=request.top_k)
     context = build_context(chunks)
     messages = build_messages(context=context, question=request.question, history=history)
     result = await asyncio.to_thread(chat, messages)
