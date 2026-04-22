@@ -61,8 +61,8 @@
 
 ### 4b — Session & History Endpoints
 - [x] Create session management endpoints (`POST /sessions`, `GET /sessions`, `GET /sessions/{id}/history`, `DELETE /sessions/{id}`)
-- [ ] Update `/ask` to accept optional `session_id` — load history, save Q&A to DB
-- [ ] Convert `ask.py` to async (for async DB sessions)
+- [x] Update `/ask` to accept optional `session_id` — load history, save Q&A to DB
+- [x] Convert `ask.py` to async (for async DB sessions)
 
 ### 4c — Conversation Quality
 - [ ] Prepend conversation history to prompt (1follow-up questions, resolve "it", "that", etc.)

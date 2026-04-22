@@ -12,22 +12,33 @@ Context:
 
 
 def build_context(chunks: list[dict]) -> str:
-    parts = []
+    formatted_chunks: list[str] = []
 
-    for i, chunk in enumerate(chunks):
-        source = chunk["metadata"].get("source", "unknown")
-        page = chunk["metadata"].get("page")
-        header = f"[Source: {source}"
-        if page:
-            header += f", Page {page}"
-        header += "]"
-        parts.append(f"{header}\n{chunk['text']}")
+    for chunk in chunks:
+        metadata = chunk["metadata"]
+        source_name = metadata.get("source", "unknown")
+        page_number = metadata.get("page")
 
-    return "\n\n---\n\n".join(parts)
+        context_header = f"[Source: {source_name}"
+
+        if page_number:
+            context_header += f", Page {page_number}"
+
+        context_header += "]"
+
+        chunk_text = chunk["text"]
+        formatted_chunks.append(f"{context_header}\n{chunk_text}")
+
+    return "\n\n---\n\n".join(formatted_chunks)
 
 
-def build_messages(context: str, question: str) -> list[dict]:
-    return [
-        {"role": "system", "content": SYSTEM_PROMPT.format(context=context)},
-        {"role": "user", "content": question},
-    ]
+def build_messages(context: str, question: str, history: list[dict] | None = None) -> list[dict]:
+    messages = [{"role": "system", "content": SYSTEM_PROMPT.format(context=context)}]
+
+    if history:
+        # Keep only valid conversational roles when replaying prior turns.
+        messages.extend(msg for msg in history if msg.get("role") in {"user", "assistant"})
+
+    messages.append({"role": "user", "content": question})
+
+    return messages
