@@ -1,19 +1,25 @@
 from pathlib import Path
-from pypdf import PdfReader
+from langchain_community.document_loaders import PyPDFLoader, TextLoader
 
 def load_txt(file_path: str) -> str:
     path = Path(file_path)
-    return path.read_text(encoding="utf-8")
+    documents = TextLoader(str(path), encoding="utf-8").load()
+
+    return "\n".join(doc.page_content for doc in documents)
 
 
 def load_pdf(file_path: str) -> list[dict]:
-    reader = PdfReader(file_path)
+    loader = PyPDFLoader(file_path)
+    documents = loader.load()
     pages = []
 
-    for i, page in enumerate(reader.pages):
-        text = page.extract_text() or ""
+    for doc in documents:
+        text = doc.page_content or ""
 
         if text.strip():
-            pages.append({"text": text, "page": i + 1})
+            pages.append({
+                "text": text,
+                "page": int(doc.metadata.get("page", 0)) + 1,
+            })
 
     return pages

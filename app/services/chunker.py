@@ -1,3 +1,6 @@
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+
 def chunk_text(
     text: str,
     source: str,
@@ -5,26 +8,22 @@ def chunk_text(
     overlap: int = 50,
     page: int | None = None,
 ) -> list[dict]:
-    chunks = []
-    start = 0
-    index = 0
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=overlap,
+    )
 
-    while start < len(text):
-        end = start + chunk_size
-        content = text[start:end].strip()
+    split_chunks = splitter.split_text(text)
 
-        if content:
-            chunk = {
-                "text": content,
-                "metadata": {
-                    "source": source,
-                    "chunk_index": index,
-                    "page": page,
-                },
-            }
-            chunks.append(chunk)
-            index += 1
-
-        start += chunk_size - overlap
-
-    return chunks
+    return [
+        {
+            "text": content,
+            "metadata": {
+                "source": source,
+                "chunk_index": index,
+                "page": page,
+            },
+        }
+        for index, content in enumerate(split_chunks)
+        if content.strip()
+    ]

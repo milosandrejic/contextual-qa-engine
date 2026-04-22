@@ -1,7 +1,9 @@
 import uuid
 import chromadb
+from langchain_core.documents import Document
+from langchain_openai import OpenAIEmbeddings
+from langchain_chroma import Chroma
 from app.core.config import settings
-from app.services.embedding import get_embedding, get_embeddings
 
 COLLECTION_NAME = "documents"
 
@@ -10,44 +12,44 @@ client = chromadb.CloudClient(
     tenant=settings.chroma_tenant,
     database=settings.chroma_database,
 )
+
 collection = client.get_or_create_collection(name=COLLECTION_NAME)
+
+embedding_function = OpenAIEmbeddings(
+    api_key=settings.openai_api_key,
+    model=settings.openai_embedding_model,
+)
+
+vector_store = Chroma(
+    client=client,
+    collection_name=COLLECTION_NAME,
+    embedding_function=embedding_function,
+)
 
 
 def store_chunks(chunks: list[dict]) -> int:
-    texts = [chunk["text"] for chunk in chunks]
-    metadatas = [
-        {k: v for k, v in chunk["metadata"].items() if v is not None}
+    documents = [
+        Document(
+            page_content=chunk["text"],
+            metadata={k: v for k, v in chunk["metadata"].items() if v is not None},
+        )
         for chunk in chunks
     ]
     ids = [str(uuid.uuid4()) for _ in chunks]
 
-    embeddings = get_embeddings(texts)
-
-    collection.add(
-        ids=ids,
-        documents=texts,
-        embeddings=embeddings,
-        metadatas=metadatas,
-    )
+    vector_store.add_documents(documents=documents, ids=ids)
 
     return len(chunks)
 
 
 def search_chunks(query: str, top_k: int = 5) -> list[dict]:
-    query_embedding = get_embedding(query)
+    results = vector_store.similarity_search_with_score(query=query, k=top_k)
 
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=top_k,
-    )
-
-    chunks = []
-
-    for i in range(len(results["ids"][0])):
-        chunks.append({
-            "text": results["documents"][0][i],
-            "metadata": results["metadatas"][0][i],
-            "distance": results["distances"][0][i],
-        })
-
-    return chunks
+    return [
+        {
+            "text": document.page_content,
+            "metadata": document.metadata,
+            "distance": score,
+        }
+        for document, score in results
+    ]

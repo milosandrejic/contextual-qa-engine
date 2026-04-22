@@ -75,14 +75,18 @@
 
 ## Phase 5 — Migrate to LangChain
 
-- [ ] Replace manual document loaders with LangChain loaders
-- [ ] Replace manual chunking with `RecursiveCharacterTextSplitter`
-- [ ] Replace manual embeddings + Chroma with LangChain's `Chroma` vectorstore
+- [x] Replace manual document loaders with LangChain loaders
+- [x] Replace manual chunking with `RecursiveCharacterTextSplitter`
+- [x] Replace manual embeddings + Chroma with LangChain's `Chroma` vectorstore
 - [ ] Replace manual RAG pipeline with LangChain's chain (retriever → prompt → LLM)
 - [ ] Compare: what LangChain adds vs. what you built manually
 - [ ] Integrate LangSmith for tracing & debugging chains
 - [ ] Add retrieval tuning: metadata filtering, MMR, chunk size/overlap config
 - [ ] Add advanced retrieval: reranking, hybrid search (BM25 + vector), query rewriting
+
+Phase 5 checkpoint tests:
+- [x] API health endpoint returns status ok
+- [x] POST /search returns ranked chunks with metadata and distance
 
 ## Phase 6 — Evaluation & Observability
 
