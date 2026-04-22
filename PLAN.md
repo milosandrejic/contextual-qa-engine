@@ -67,7 +67,7 @@
 ### 4c — Conversation Quality
 - [x] Prepend conversation history to prompt (1follow-up questions, resolve "it", "that", etc.)
 - [x] Limit conversation history (sliding window — last N messages)
-- [ ] Add citation system (LLM uses [1], [2] format, return numbered sources)
+- [x] Add citation system (LLM uses [1], [2] format, return numbered sources)
 
 ---
 

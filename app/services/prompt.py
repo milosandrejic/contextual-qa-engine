@@ -6,7 +6,9 @@ Rules:
 - If the context does not contain enough information to answer, say "I don't know based on the provided documents."
 - Do not make up information.
 - Keep answers concise and relevant.
-- If you quote from the context, mention the source.
+- Add citations in square brackets that point to context block numbers, for example [1] or [2].
+- Cite claims grounded in context using the matching context numbers.
+- If multiple blocks support a claim, include multiple citations like [1][3].
 
 Context:
 {context}"""
@@ -15,12 +17,12 @@ Context:
 def build_context(chunks: list[dict]) -> str:
     formatted_chunks: list[str] = []
 
-    for chunk in chunks:
+    for index, chunk in enumerate(chunks, start=1):
         metadata = chunk["metadata"]
         source_name = metadata.get("source", "unknown")
         page_number = metadata.get("page")
 
-        context_header = f"[Source: {source_name}"
+        context_header = f"[{index}] [Source: {source_name}"
 
         if page_number:
             context_header += f", Page {page_number}"

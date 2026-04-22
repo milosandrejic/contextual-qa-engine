@@ -42,12 +42,13 @@ async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
 
     sources = [
         {
+            "citation": index,
             "source": chunk["metadata"].get("source"),
             "page": chunk["metadata"].get("page"),
             "chunk_index": chunk["metadata"].get("chunk_index"),
             "distance": chunk["distance"],
         }
-        for chunk in chunks
+        for index, chunk in enumerate(chunks, start=1)
     ]
 
     if request.session_id:
