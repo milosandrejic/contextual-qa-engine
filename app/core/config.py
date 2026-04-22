@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     chroma_database: str = ""
 
     database_url: str = ""
+    max_history_messages: int = 20
 
 
 settings = Settings()

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
+from app.core.config import settings
 from app.services import chat_history
 from app.services.vector_store import search_chunks
 from app.services.prompt import build_context, build_messages
@@ -28,7 +29,11 @@ async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        history = await chat_history.get_session_history(db, request.session_id)
+        history = await chat_history.get_session_history(
+            db=db,
+            session_id=request.session_id,
+            limit=settings.max_history_messages,
+        )
 
     chunks = await asyncio.to_thread(search_chunks, query=request.question, top_k=request.top_k)
     context = build_context(chunks)

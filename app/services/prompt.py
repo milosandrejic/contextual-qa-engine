@@ -2,6 +2,7 @@ SYSTEM_PROMPT = """You are a helpful assistant that answers questions based on t
 
 Rules:
 - Only use the context below to answer the question.
+- Use the prior conversation messages (if provided) to understand follow-up questions and references like "it", "that", "they", or "this".
 - If the context does not contain enough information to answer, say "I don't know based on the provided documents."
 - Do not make up information.
 - Keep answers concise and relevant.

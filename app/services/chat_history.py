@@ -68,13 +68,23 @@ async def add_message(
     return message
 
 
-async def get_session_history(db: AsyncSession, session_id: uuid.UUID) -> list[dict]:
-    result = await db.execute(
+async def get_session_history(
+    db: AsyncSession,
+    session_id: uuid.UUID,
+    limit: int | None = None,
+) -> list[dict]:
+    query = (
         select(Message)
         .where(Message.session_id == session_id)
-        .order_by(Message.created_at.asc())
+        .order_by(Message.created_at.desc())
     )
-    
-    messages = result.scalars().all()
+
+    if limit is not None and limit > 0:
+        query = query.limit(limit)
+
+    result = await db.execute(query)
+    messages_desc = result.scalars().all()
+    # Fetch newest N efficiently (DESC + LIMIT), then restore chronological order for prompt replay.
+    messages = list(reversed(messages_desc))
 
     return [{"role": msg.role, "content": msg.content} for msg in messages]
