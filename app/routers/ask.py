@@ -7,8 +7,9 @@ from app.core.database import get_db
 from app.core.config import settings
 from app.services import chat_history
 from app.services.vector_store import search_chunks
-from app.services.prompt import build_context, build_messages
-from app.services.llm import chat
+from app.services.prompt import build_context
+from app.services.llm import generate_answer
+from app.services.query_builder import build_history_aware_query
 
 router = APIRouter()
 
@@ -17,30 +18,6 @@ class AskRequest(BaseModel):
     question: str
     top_k: int = 5
     session_id: uuid.UUID | None = None
-
-
-def build_history_aware_query(question: str, history: list[dict], max_messages: int = 6) -> str:
-    if not history:
-        return question
-
-    recent_history = history[-max_messages:]
-    history_lines: list[str] = []
-
-    for message in recent_history:
-        role = message.get("role")
-        content = message.get("content")
-
-        if role in {"user", "assistant"} and content:
-            history_lines.append(f"{role}: {content}")
-
-    if not history_lines:
-        return question
-
-    return "\n".join([
-        "Use this conversation context to resolve references in the current question:",
-        *history_lines,
-        f"current_question: {question}",
-    ])
 
 
 @router.post("/ask")
@@ -63,8 +40,8 @@ async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
 
     chunks = await asyncio.to_thread(search_chunks, query=retrieval_query, top_k=request.top_k)
     context = build_context(chunks)
-    messages = build_messages(context=context, question=request.question, history=history)
-    result = await asyncio.to_thread(chat, messages)
+
+    result = await asyncio.to_thread(generate_answer, context, request.question, history)
 
     sources = [
         {
