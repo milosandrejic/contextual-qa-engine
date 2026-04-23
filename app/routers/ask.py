@@ -15,7 +15,7 @@ router = APIRouter()
 
 class AskRequest(BaseModel):
     question: str
-    top_k: int = 5
+    top_k: int = 3
     session_id: uuid.UUID | None = None
 
 @router.post("/ask")

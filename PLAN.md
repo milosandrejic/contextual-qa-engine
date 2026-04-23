@@ -81,7 +81,7 @@
 - [x] Replace manual RAG pipeline with LangChain's chain (retriever → prompt → LLM)
 - [x] Compare: what LangChain adds vs. what you built manually
 - [x] Integrate LangSmith for tracing & debugging chains
-- [ ] Add retrieval tuning: metadata filtering, MMR, chunk size/overlap config
+- [x] Add retrieval tuning: top_k sweep benchmark → default top_k=3 (metadata filtering, MMR, chunk size still open)
 - [ ] Add advanced retrieval: reranking, hybrid search (BM25 + vector), query rewriting
 
 ## Phase 6 — Evaluation & Observability
