@@ -20,6 +20,10 @@ class Settings(BaseSettings):
 
     database_url: str = ""
     max_history_messages: int = 20
+    langsmith_tracing: bool = False
+    langsmith_api_key: str | None = None
+    langsmith_project: str = "contextual-qa-engine"
+    langsmith_endpoint: str = "https://api.smith.langchain.com"
 
 
 settings = Settings()

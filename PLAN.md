@@ -79,8 +79,8 @@
 - [x] Replace manual chunking with `RecursiveCharacterTextSplitter`
 - [x] Replace manual embeddings + Chroma with LangChain's `Chroma` vectorstore
 - [x] Replace manual RAG pipeline with LangChain's chain (retriever → prompt → LLM)
-- [ ] Compare: what LangChain adds vs. what you built manually
-- [ ] Integrate LangSmith for tracing & debugging chains
+- [x] Compare: what LangChain adds vs. what you built manually
+- [x] Integrate LangSmith for tracing & debugging chains
 - [ ] Add retrieval tuning: metadata filtering, MMR, chunk size/overlap config
 - [ ] Add advanced retrieval: reranking, hybrid search (BM25 + vector), query rewriting
 

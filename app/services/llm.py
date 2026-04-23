@@ -1,7 +1,24 @@
+import os
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 from app.core.config import settings
+
+
+def _configure_langsmith_tracing() -> None:
+    """Enable LangSmith tracing through environment variables when configured."""
+    should_enable_tracing = settings.langsmith_tracing and bool(settings.langsmith_api_key)
+
+    if not should_enable_tracing:
+        return
+
+    os.environ["LANGSMITH_TRACING"] = "true"
+    os.environ["LANGSMITH_API_KEY"] = settings.langsmith_api_key
+    os.environ["LANGSMITH_PROJECT"] = settings.langsmith_project
+    os.environ["LANGSMITH_ENDPOINT"] = settings.langsmith_endpoint
+
+
+_configure_langsmith_tracing()
 
 chat_model = ChatOpenAI(
     api_key=settings.openai_api_key,
