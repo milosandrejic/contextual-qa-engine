@@ -82,40 +82,14 @@
 - [x] Compare: what LangChain adds vs. what you built manually
 - [x] Integrate LangSmith for tracing & debugging chains
 - [x] Add retrieval tuning: top_k sweep benchmark → default top_k=3 (metadata filtering, MMR, chunk size still open)
-- [ ] Add advanced retrieval: reranking, hybrid search (BM25 + vector), query rewriting
 
-## Phase 6 — Evaluation & Observability
+## Phase 6 — Evaluation
 
-- [ ] Log all queries, retrieved chunks, and responses
-- [ ] Add evaluation with RAGAS (faithfulness, relevance, context precision)
-- [ ] Build a small golden dataset (20-30 Q&A pairs) for regression testing
-- [ ] Add latency tracking per pipeline step
-- [ ] Use LangSmith traces to debug bad answers
-- [ ] Cost monitoring (LLM + embeddings usage)
-- [ ] Prompt versioning
+- [ ] Expand golden dataset to 20-30 Q&A pairs
+- [ ] Add RAGAS evaluation (faithfulness, answer relevance, context precision)
+- [ ] Document how to read LangSmith traces for cost + latency
 
-## Phase 7 — Agent Layer (LangGraph)
+## Phase 7 — Production Hardening
 
-- [ ] Build retrieval agent with LangGraph (decides if/how to retrieve)
-- [ ] Add tool-calling: `search_docs`, `get_metadata`, `summarize_doc`
-- [ ] Multi-step QA agent (plan → retrieve → answer → verify)
-- [ ] Retry / fallback logic when retrieval quality is low
-
-## Phase 8 — Production Hardening
-
-- [ ] Add Redis for caching frequent queries / embeddings
 - [ ] Rate limiting & input validation
-- [ ] Migrate to Pinecone or Weaviate (managed vector DB)
-- [ ] Add background job processing for document ingestion
-
----
-
-## Notes
-
-- **Part A is the learning foundation.** Every concept (chunking, embeddings, retrieval, prompt building) is done manually so you understand exactly what LangChain abstracts away.
-- **Part B replaces your manual code** with LangChain equivalents. By then you'll immediately understand what each LangChain component does because you've already built it yourself.
-- **LangGraph for agents** — explicit state machine control, much better than the older AgentExecutor pattern.
-- **RAGAS for evaluation** — structured metrics (faithfulness, answer relevance, context precision) out of the box.
-- **Hybrid search (BM25 + vector)** — pure vector search misses exact keyword matches. Combining both catches more.
-- **Query rewriting is high-impact** — simple to implement, dramatically improves retrieval for vague questions.
-- **Golden dataset** — 20-30 Q&A pairs lets you measure if changes actually improve quality. Build it early.
+- [ ] Background job processing for document ingestion (FastAPI BackgroundTasks)
