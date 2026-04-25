@@ -1,10 +1,14 @@
+import asyncio
 import json
 import shutil
 from pathlib import Path
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.database import get_db
 from app.services.document_loader import load_txt, load_pdf
 from app.services.chunker import chunk_text
 from app.services.vector_store import store_chunks
+from app.services import document as document_service
 
 router = APIRouter()
 
@@ -18,20 +22,14 @@ ALLOWED_EXTENSIONS = {".txt", ".pdf"}
 
 
 @router.post("/upload")
-def upload_document(file: UploadFile = File(...)):
+async def upload_document(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+):
     """Upload and process a document (.txt or .pdf).
-    
-    Validates file type, saves to disk, extracts and chunks text, stores in vector DB.
-    Returns chunk metadata and a sample of the chunks created.
-    
-    Args:
-        file: Uploaded file object.
-    
-    Returns:
-        Dict with filename, chunk count, vector DB storage status, chunks file path, and sample chunks.
-    
-    Raises:
-        HTTPException: 400 if filename missing, file type unsupported, file empty, or processing fails.
+
+    Validates file type, saves to disk, extracts and chunks text, stores chunks
+    in the vector DB, and persists a Document row in the relational DB.
     """
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided.")
@@ -44,10 +42,21 @@ def upload_document(file: UploadFile = File(...)):
             detail=f"Unsupported file type: {ext}. Allowed: {', '.join(ALLOWED_EXTENSIONS)}",
         )
 
+    existing = await document_service.get_document_by_filename(db, file.filename)
+
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Document with filename '{file.filename}' already exists.",
+        )
+
     file_path = UPLOAD_DIR / file.filename
 
     with open(file_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
+
+    file_size = file_path.stat().st_size
+    page_count: int | None = None
 
     try:
         if ext == ".txt":
@@ -64,6 +73,7 @@ def upload_document(file: UploadFile = File(...)):
             if not pages:
                 raise HTTPException(status_code=400, detail="PDF has no extractable text.")
 
+            page_count = len(pages)
             chunks = []
 
             for page in pages:
@@ -84,12 +94,23 @@ def upload_document(file: UploadFile = File(...)):
     with open(chunks_file, "w") as f:
         json.dump(chunks, f, indent=2)
 
-    stored = store_chunks(chunks)
+    stored = await asyncio.to_thread(store_chunks, chunks)
+
+    document = await document_service.create_document(
+        db=db,
+        filename=file.filename,
+        file_size=file_size,
+        chunk_count=len(chunks),
+        page_count=page_count,
+    )
 
     return {
-        "filename": file.filename,
-        "chunks": len(chunks),
+        "id": document.id,
+        "filename": document.filename,
+        "file_size": document.file_size,
+        "page_count": document.page_count,
+        "chunk_count": document.chunk_count,
+        "indexed_at": document.indexed_at,
         "stored_in_vector_db": stored,
         "chunks_file": str(chunks_file),
-        "sample": chunks[:2] if chunks else [],
     }

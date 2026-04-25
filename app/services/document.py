@@ -37,6 +37,11 @@ async def get_document(db: AsyncSession, document_id: uuid.UUID) -> Document | N
     return await db.get(Document, document_id)
 
 
+async def get_document_by_filename(db: AsyncSession, filename: str) -> Document | None:
+    result = await db.execute(select(Document).where(Document.filename == filename))
+    return result.scalars().first()
+
+
 async def delete_document(db: AsyncSession, document_id: uuid.UUID) -> bool:
     document = await db.get(Document, document_id)
 
