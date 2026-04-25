@@ -67,7 +67,7 @@ async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
             "source": chunk["metadata"].get("source"),
             "page": chunk["metadata"].get("page"),
             "chunk_index": chunk["metadata"].get("chunk_index"),
-            "similarity": round(max(0.0, 1.0 - chunk["distance"]), 4),
+            "distance": chunk["distance"],
         }
         for index, chunk in enumerate(chunks, start=1)
     ]
