@@ -53,3 +53,19 @@ def search_chunks(query: str, top_k: int = 5) -> list[dict]:
         }
         for document, score in results
     ]
+
+
+def delete_chunks_by_source(source: str) -> int:
+    """Delete all vector chunks whose metadata.source matches the given filename.
+
+    Returns the number of chunks deleted.
+    """
+    existing = collection.get(where={"source": source})
+    ids = existing.get("ids") or []
+
+    if not ids:
+        return 0
+
+    collection.delete(ids=ids)
+
+    return len(ids)

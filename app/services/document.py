@@ -1,8 +1,10 @@
+import asyncio
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.document import Document
+from app.services.vector_store import delete_chunks_by_source
 
 
 async def create_document(
@@ -48,7 +50,11 @@ async def delete_document(db: AsyncSession, document_id: uuid.UUID) -> bool:
     if not document:
         return False
 
+    filename = document.filename
+
     await db.delete(document)
     await db.commit()
+
+    await asyncio.to_thread(delete_chunks_by_source, filename)
 
     return True
