@@ -1,4 +1,5 @@
 import asyncio
+import time
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -38,6 +39,8 @@ async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
     """
     history: list[dict] = []
 
+    started_at = time.perf_counter()
+
     if request.session_id:
         session = await chat_history.get_session(db, request.session_id)
 
@@ -60,10 +63,11 @@ async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
     sources = [
         {
             "citation": index,
+            "text": chunk["text"],
             "source": chunk["metadata"].get("source"),
             "page": chunk["metadata"].get("page"),
             "chunk_index": chunk["metadata"].get("chunk_index"),
-            "distance": chunk["distance"],
+            "similarity": round(max(0.0, 1.0 - chunk["distance"]), 4),
         }
         for index, chunk in enumerate(chunks, start=1)
     ]
@@ -89,6 +93,7 @@ async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
         "question": request.question,
         "session_id": request.session_id,
         "answer": result["answer"],
+        "latency_ms": int((time.perf_counter() - started_at) * 1000),
         "sources": sources,
         "usage": result["usage"],
     }
