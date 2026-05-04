@@ -82,6 +82,7 @@ async def add_message(
     content: str,
     sources: list[dict] | dict | None = None,
     token_usage: dict | None = None,
+    latency_ms: int | None = None,
 ) -> Message:
     """Add a message to a session.
     
@@ -92,6 +93,7 @@ async def add_message(
         content: Message text content.
         sources: Optional list/dict of source citations.
         token_usage: Optional dict with token usage metrics.
+        latency_ms: Optional latency in milliseconds.
     
     Returns:
         Newly created Message object with auto-generated ID and timestamps.
@@ -102,6 +104,7 @@ async def add_message(
         content=content,
         sources=sources,
         token_usage=token_usage,
+        latency_ms=latency_ms,
     )
 
     db.add(message)

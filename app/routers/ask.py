@@ -59,6 +59,8 @@ async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
     context = build_context(chunks)
 
     result = await asyncio.to_thread(generate_answer, context, request.question, history)
+    
+    latency_ms = int((time.perf_counter() - started_at) * 1000)
 
     sources = [
         {
@@ -87,13 +89,14 @@ async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
             content=result["answer"],
             sources=sources,
             token_usage=result["usage"],
+            latency_ms=latency_ms,
         )
 
     return {
         "question": request.question,
         "session_id": request.session_id,
         "answer": result["answer"],
-        "latency_ms": int((time.perf_counter() - started_at) * 1000),
+        "latency_ms": latency_ms,
         "sources": sources,
         "usage": result["usage"],
     }

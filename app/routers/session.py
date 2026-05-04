@@ -53,6 +53,7 @@ async def get_session_history(session_id: uuid.UUID, db: AsyncSession = Depends(
                 "content": m.content,
                 "sources": m.sources,
                 "token_usage": m.token_usage,
+                "latency_ms": m.latency_ms,
                 "created_at": m.created_at,
             }
             for m in session.messages

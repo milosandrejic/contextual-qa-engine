@@ -20,6 +20,7 @@ class Settings(BaseSettings):
 
     database_url: str = ""
     max_history_messages: int = 20
+    cors_allow_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
     langsmith_tracing: bool = False
     langsmith_api_key: str | None = None
     langsmith_project: str = "contextual-qa-engine"
