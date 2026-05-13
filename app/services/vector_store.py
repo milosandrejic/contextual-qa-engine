@@ -27,6 +27,9 @@ vector_store = Chroma(
 )
 
 
+CHROMA_MAX_BATCH_SIZE = 250
+
+
 def store_chunks(chunks: list[dict]) -> int:
     documents = [
         Document(
@@ -37,7 +40,11 @@ def store_chunks(chunks: list[dict]) -> int:
     ]
     ids = [str(uuid.uuid4()) for _ in chunks]
 
-    vector_store.add_documents(documents=documents, ids=ids)
+    for i in range(0, len(documents), CHROMA_MAX_BATCH_SIZE):
+        vector_store.add_documents(
+            documents=documents[i : i + CHROMA_MAX_BATCH_SIZE],
+            ids=ids[i : i + CHROMA_MAX_BATCH_SIZE],
+        )
 
     return len(chunks)
 
