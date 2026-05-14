@@ -30,7 +30,7 @@ from pathlib import Path
 # Allow importing from project root
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.services.retriever import search_chunks
+from app.services.pg_vector_store import get_retriever
 from app.services.prompt import build_context
 from app.services.llm import generate_answer
 from benchmark.metrics import compute_retrieval_metrics, aggregate_metrics
@@ -48,11 +48,13 @@ async def run_retrieval_eval(
     golden_set: list[dict],
     top_k: int,
     include_ragas: bool,
+    mode: str = "hybrid",
 ) -> dict:
     per_query_retrieval: list[dict] = []
     ragas_samples: list[dict] = []
 
-    print(f"Running evaluation on {len(golden_set)} questions (top_k={top_k})...")
+    retrieve = get_retriever(mode)
+    print(f"Running evaluation on {len(golden_set)} questions (top_k={top_k}, mode={mode})...")
 
     for i, item in enumerate(golden_set, start=1):
         question = item["question"]
@@ -60,7 +62,7 @@ async def run_retrieval_eval(
 
         print(f"  [{i}/{len(golden_set)}] {question[:70]}...")
 
-        retrieved = await search_chunks(query=question, top_k=top_k)
+        retrieved = await retrieve(query=question, top_k=top_k)
         metrics = compute_retrieval_metrics(retrieved=retrieved, expected=expected)
         per_query_retrieval.append({"id": item["id"], **metrics})
 
@@ -78,6 +80,7 @@ async def run_retrieval_eval(
 
     report = {
         "run_at": datetime.now(timezone.utc).isoformat(),
+        "retrieval_mode": mode,
         "top_k": top_k,
         "num_questions": len(golden_set),
         "retrieval_metrics": retrieval_summary,
@@ -134,6 +137,12 @@ def main() -> None:
         action="store_true",
         help="Also run RAGAS end-to-end evaluation (requires LLM calls)",
     )
+    parser.add_argument(
+        "--mode",
+        default="hybrid",
+        choices=["semantic", "lexical", "hybrid"],
+        help="Retrieval mode to benchmark (default: hybrid)",
+    )
     args = parser.parse_args()
 
     golden_set = load_golden_set(args.golden_set)
@@ -142,6 +151,7 @@ def main() -> None:
         golden_set=golden_set,
         top_k=args.top_k,
         include_ragas=args.ragas,
+        mode=args.mode,
     ))
 
     out_path = save_report(report)

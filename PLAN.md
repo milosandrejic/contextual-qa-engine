@@ -114,9 +114,12 @@
   - [x] Remove Chroma code + dependency after parity confirmed
 - [x] `LexicalRetriever` (Postgres FTS via `websearch_to_tsquery` + `ts_rank_cd`)
 - [x] `SemanticRetriever` (pgvector cosine)
-- [ ] **RRF fusion** as a pure, unit-tested function
-- [ ] `RETRIEVAL_MODE` env var: `semantic | lexical | hybrid` for A/B
-- [ ] Benchmark all three modes; document where each wins
+- [x] **RRF fusion** as a pure, unit-tested function
+- [x] `RETRIEVAL_MODE` env var: `semantic | lexical | hybrid` for A/B
+- [x] Benchmark all three modes; document where each wins
+  - semantic: recall@5=0.60, nDCG@10=0.7334, MRR=0.42
+  - lexical:  recall@5=0.16, nDCG@10=0.1659, MRR=0.12  (weak on conceptual queries)
+  - hybrid:   recall@5=0.60, nDCG@10=0.7499, MRR=0.43  ← default; best recall@1 (+4pp) and nDCG@10
 
 ## Phase 8 — Reranking
 

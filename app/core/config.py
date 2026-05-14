@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     openai_embedding_model: str = "text-embedding-3-small"
 
     database_url: str = ""
+    retrieval_mode: str = "hybrid"  # "semantic" | "lexical" | "hybrid"
     max_history_messages: int = 20
     cors_allow_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
     langsmith_tracing: bool = False

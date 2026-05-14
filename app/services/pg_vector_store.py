@@ -129,6 +129,65 @@ async def search_chunks_lexical(query: str, top_k: int = 5) -> list[dict]:
     ]
 
 
+RRF_K = 60
+
+
+def _chunk_key(chunk: dict) -> tuple:
+    m = chunk["metadata"]
+    return (m.get("source"), m.get("page"), m.get("chunk_index"))
+
+
+def rrf_fuse(results_lists: list[list[dict]], k: int = RRF_K) -> list[dict]:
+    """Fuse ranked result lists with Reciprocal Rank Fusion.
+
+    Score per chunk: sum(1 / (k + rank_i)) across every retriever that returned it.
+    Rank-based, so cosine distances and ts_rank_cd values need no normalisation.
+    Returns chunks sorted by descending RRF score; distance = 1/score (lower = better).
+    """
+    scores: dict[tuple, float] = {}
+    chunks_by_key: dict[tuple, dict] = {}
+
+    for result_list in results_lists:
+        for rank, chunk in enumerate(result_list, start=1):
+            key = _chunk_key(chunk)
+            scores[key] = scores.get(key, 0.0) + 1.0 / (k + rank)
+            if key not in chunks_by_key:
+                chunks_by_key[key] = chunk
+
+    fused = sorted(scores.keys(), key=lambda key: scores[key], reverse=True)
+
+    return [
+        {**chunks_by_key[key], "distance": 1.0 / scores[key]}
+        for key in fused
+    ]
+
+
+async def search_chunks_hybrid(query: str, top_k: int = 5) -> list[dict]:
+    """Return top-k chunks using RRF fusion of semantic + lexical results.
+
+    Each retriever fetches 2*top_k candidates so that chunks present in only
+    one retriever still have a fair chance of reaching the final top-k.
+    """
+    import asyncio
+    semantic, lexical = await asyncio.gather(
+        search_chunks(query=query, top_k=top_k * 2),
+        search_chunks_lexical(query=query, top_k=top_k * 2),
+    )
+    return rrf_fuse([semantic, lexical])[:top_k]
+
+
+_RETRIEVERS = {
+    "semantic": search_chunks,
+    "lexical": search_chunks_lexical,
+    "hybrid": search_chunks_hybrid,
+}
+
+
+def get_retriever(mode: str):
+    """Return the retriever callable for the given mode, defaulting to hybrid."""
+    return _RETRIEVERS.get(mode, search_chunks_hybrid)
+
+
 async def delete_chunks_by_source(source: str) -> int:
     """Delete all chunks whose source matches the given filename.
 
