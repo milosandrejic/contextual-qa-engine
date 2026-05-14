@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.services.document_loader import load_txt, load_pdf
 from app.services.chunker import chunk_text
-from app.services.vector_store import store_chunks
+from app.services.pg_vector_store import store_chunks
 from app.services import document as document_service
 
 router = APIRouter()
@@ -94,8 +94,6 @@ async def upload_document(
     with open(chunks_file, "w") as f:
         json.dump(chunks, f, indent=2)
 
-    stored = await asyncio.to_thread(store_chunks, chunks)
-
     document = await document_service.create_document(
         db=db,
         filename=file.filename,
@@ -103,6 +101,8 @@ async def upload_document(
         chunk_count=len(chunks),
         page_count=page_count,
     )
+
+    stored = await store_chunks(chunks, document.id)
 
     return {
         "id": document.id,

@@ -14,10 +14,6 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     openai_embedding_model: str = "text-embedding-3-small"
 
-    chroma_api_key: str = ""
-    chroma_tenant: str = ""
-    chroma_database: str = ""
-
     database_url: str = ""
     max_history_messages: int = 20
     cors_allow_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]

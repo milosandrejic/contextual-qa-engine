@@ -102,17 +102,16 @@
 
 ## Phase 7 — Hybrid Search (BM25 + semantic)
 
-- [ ] Migrate vectors from Chroma to **pgvector** (single-store architecture)
-  - [ ] Switch Postgres image to `pgvector/pgvector:pg16` in `docker-compose.yml`
-  - [ ] Add `pgvector` Python package to `requirements.txt`
-  - [ ] Alembic migration: `CREATE EXTENSION IF NOT EXISTS vector;`
-  - [ ] Create `Chunk` SQLAlchemy model: `id`, `document_id` (FK), `source`, `page`, `chunk_index`, `content`, `embedding vector(1536)`, `metadata JSONB`, `created_at`
-  - [ ] Alembic migration: `chunks` table + HNSW index on `embedding` (cosine) + btree indexes on `source`, `document_id`
-  - [ ] New service `app/services/pg_vector_store.py`: `store_chunks`, `search_chunks` (pgvector cosine via `<=>`), `delete_by_source`
-  - [ ] Backfill script `scripts/migrate_chroma_to_pgvector.py`: read `data/chunks/*.json`, embed, insert into `chunks`
-  - [ ] Add `VECTOR_BACKEND` env flag (`chroma | pgvector`); wire `/ask`, `/search`, `/upload`, `/documents` to selected backend
-  - [ ] Re-run `scripts/eval_retrieval.py` against pgvector; confirm parity (recall@5 ≥ 0.60, nDCG@10 ≥ 0.74)
-  - [ ] Remove Chroma code + dependency after parity confirmed
+- [x] Migrate vectors from Chroma to **pgvector** (single-store architecture)
+  - [x] Switch Postgres image to `pgvector/pgvector:pg16` in `docker-compose.yml`
+  - [x] Add `pgvector` Python package to `requirements.txt`
+  - [x] Alembic migration: `CREATE EXTENSION IF NOT EXISTS vector;`
+  - [x] Create `Chunk` SQLAlchemy model: `id`, `document_id` (FK), `source`, `page`, `chunk_index`, `content`, `embedding vector(1536)`, `metadata JSONB`, `created_at`
+  - [x] Alembic migration: `chunks` table + HNSW index on `embedding` (cosine) + btree indexes on `source`, `document_id`
+  - [x] New service `app/services/pg_vector_store.py`: `store_chunks`, `search_chunks` (pgvector cosine via `<=>`), `delete_by_source`
+  - [x] Add `VECTOR_BACKEND` env flag (`chroma | pgvector`); wire `/ask`, `/search`, `/upload`, `/documents` to selected backend
+  - [x] Re-run `scripts/eval_retrieval.py` against pgvector; confirm parity (recall@5 ≥ 0.60, nDCG@10 ≥ 0.74)
+  - [x] Remove Chroma code + dependency after parity confirmed
 - [ ] Add `chunks` table: `content`, `content_tsv` (tsvector), `embedding vector(1536)` + Alembic migration
 - [ ] `LexicalRetriever` (Postgres FTS via `websearch_to_tsquery` + `ts_rank_cd`)
 - [ ] `SemanticRetriever` (pgvector cosine)

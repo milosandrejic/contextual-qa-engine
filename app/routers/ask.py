@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.config import settings
 from app.services import chat_history
-from app.services.vector_store import search_chunks
+from app.services.pg_vector_store import search_chunks
 from app.services.prompt import build_context
 from app.services.llm import generate_answer
 from app.services.query_builder import build_history_aware_query
@@ -55,7 +55,7 @@ async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
 
     retrieval_query = build_history_aware_query(request.question, history)
 
-    chunks = await asyncio.to_thread(search_chunks, query=retrieval_query, top_k=request.top_k)
+    chunks = await search_chunks(query=retrieval_query, top_k=request.top_k)
     context = build_context(chunks)
 
     result = await asyncio.to_thread(generate_answer, context, request.question, history)

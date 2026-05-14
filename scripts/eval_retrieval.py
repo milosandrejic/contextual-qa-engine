@@ -21,6 +21,7 @@ Usage (from project root with .venv active):
 """
 
 import argparse
+import asyncio
 import json
 import sys
 from datetime import datetime, timezone
@@ -29,7 +30,7 @@ from pathlib import Path
 # Allow importing from project root
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.services.vector_store import search_chunks
+from app.services.retriever import search_chunks
 from app.services.prompt import build_context
 from app.services.llm import generate_answer
 from benchmark.metrics import compute_retrieval_metrics, aggregate_metrics
@@ -43,7 +44,7 @@ def load_golden_set(path: str) -> list[dict]:
         return json.load(f)
 
 
-def run_retrieval_eval(
+async def run_retrieval_eval(
     golden_set: list[dict],
     top_k: int,
     include_ragas: bool,
@@ -59,7 +60,7 @@ def run_retrieval_eval(
 
         print(f"  [{i}/{len(golden_set)}] {question[:70]}...")
 
-        retrieved = search_chunks(query=question, top_k=top_k)
+        retrieved = await search_chunks(query=question, top_k=top_k)
         metrics = compute_retrieval_metrics(retrieved=retrieved, expected=expected)
         per_query_retrieval.append({"id": item["id"], **metrics})
 
@@ -137,11 +138,11 @@ def main() -> None:
 
     golden_set = load_golden_set(args.golden_set)
 
-    report = run_retrieval_eval(
+    report = asyncio.run(run_retrieval_eval(
         golden_set=golden_set,
         top_k=args.top_k,
         include_ragas=args.ragas,
-    )
+    ))
 
     out_path = save_report(report)
     print_summary(report)
