@@ -48,6 +48,55 @@ Once you have ~5,000+ chunks indexed:
 3. Rewrite [benchmark/questions.json](benchmark/questions.json) — current questions are specific to the Attention paper and won't transfer
 4. Re-run sweep with wider range: `python benchmark/run_benchmark.py --top-k 3 5 8 12 --label wide-sweep`
 
+## How to read LangSmith traces for cost + latency
+
+Every `/ask` request creates one trace in LangSmith (when `LANGSMITH_TRACING=true`).
+Open https://smith.langchain.com → your project → click any trace.
+
+### Trace anatomy
+
+```
+RunnableSequence                   ← the full qa_chain (prompt | llm)
+├── ChatPromptTemplate             ← prompt construction (microseconds, no cost)
+└── ChatOpenAI                     ← the actual LLM call
+    ├── Latency: 1.2s
+    ├── Input tokens:  847
+    ├── Output tokens: 193
+    └── Total tokens:  1040
+```
+
+The **ChatOpenAI** node is the only one that costs money.
+
+### Reading cost
+
+LangSmith shows token counts per run. To calculate cost manually:
+- `gpt-4o-mini`: ~$0.15 / 1M input tokens, ~$0.60 / 1M output tokens
+- A typical `/ask` with top_k=5 uses ~600–900 input tokens + ~150–250 output tokens ≈ **$0.0003 per request**
+
+To find expensive runs: sort traces by **Total Tokens** descending. Long conversation histories are the usual culprit — the sliding window (`MAX_HISTORY_MESSAGES`) keeps this bounded.
+
+### Reading latency
+
+Each node shows wall-clock time. The split to watch:
+
+| Node | Expected | Red flag |
+|---|---|---|
+| `ChatPromptTemplate` | < 5ms | — |
+| `ChatOpenAI` (streaming off) | 1–4s | > 8s |
+| Full trace | 2–6s | > 10s |
+
+High latency on `ChatOpenAI` is almost always network / OpenAI load — not your code. If the prompt template node is slow, you have a Python-side bottleneck.
+
+### Finding retrieval quality issues
+
+LangSmith traces the LLM call but **not** the Chroma retrieval step (that's plain Python, not a LangChain runnable). To trace retrieval:
+1. Wrap `search_chunks` in a `@traceable` decorator from `langsmith`
+2. Or add a log line with the retrieved chunk sources before calling the chain — visible in the trace's metadata
+
+### Comparing runs
+
+Use LangSmith's **Datasets & Experiments** tab to run the golden set directly through the chain and track scores over time. Alternatively, the `benchmark/results/` JSON files from `eval_retrieval.py` give you a simpler diff without the LangSmith UI.
+
 ## Notes
 
 - Citations in LangSmith traces will start looking meaningful once filenames are real (`llm-survey.pdf` instead of `test.pdf`)

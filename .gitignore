@@ -21,3 +21,6 @@ data/
 
 # ChromaDB local storage
 chroma_data/
+
+# Benchmark results
+benchmark

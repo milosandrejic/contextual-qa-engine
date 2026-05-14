@@ -83,13 +83,82 @@
 - [x] Integrate LangSmith for tracing & debugging chains
 - [x] Add retrieval tuning: top_k sweep benchmark → default top_k=3 (metadata filtering, MMR, chunk size still open)
 
-## Phase 6 — Evaluation
+---
 
-- [ ] Expand golden dataset to 20-30 Q&A pairs
-- [ ] Add RAGAS evaluation (faithfulness, answer relevance, context precision)
-- [ ] Document how to read LangSmith traces for cost + latency
+# Part C — Modern Retrieval Pipeline
 
-## Phase 7 — Production Hardening
+> **Goal:** turn the current single-retriever RAG into a production-grade pipeline:
+> query understanding → hybrid retrieval → fusion → rerank → eval-driven tuning.
+> Every phase is gated by metrics from Phase 6 — no tuning without measurement.
+
+## Phase 6 — Evaluation Harness (foundation)
+
+- [x] Build golden set: 20–30 `(question, expected_answer, expected_source_chunks)` in `benchmark/`
+- [x] Retrieval metrics: Recall@K, MRR, nDCG@10
+- [x] End-to-end metrics via RAGAS: faithfulness, answer relevance, context precision
+- [x] `scripts/eval_retrieval.py` runner that takes a retriever + golden set → JSON report
+- [x] Persist results to `benchmark/results/` with timestamp for run-to-run diffs
+- [x] Document how to read LangSmith traces for cost + latency
+
+## Phase 7 — Hybrid Search (BM25 + semantic)
+
+- [ ] Migrate vectors from Chroma to **pgvector** (single-store architecture)
+  - [ ] Switch Postgres image to `pgvector/pgvector:pg16` in `docker-compose.yml`
+  - [ ] Add `pgvector` Python package to `requirements.txt`
+  - [ ] Alembic migration: `CREATE EXTENSION IF NOT EXISTS vector;`
+  - [ ] Create `Chunk` SQLAlchemy model: `id`, `document_id` (FK), `source`, `page`, `chunk_index`, `content`, `embedding vector(1536)`, `metadata JSONB`, `created_at`
+  - [ ] Alembic migration: `chunks` table + HNSW index on `embedding` (cosine) + btree indexes on `source`, `document_id`
+  - [ ] New service `app/services/pg_vector_store.py`: `store_chunks`, `search_chunks` (pgvector cosine via `<=>`), `delete_by_source`
+  - [ ] Backfill script `scripts/migrate_chroma_to_pgvector.py`: read `data/chunks/*.json`, embed, insert into `chunks`
+  - [ ] Add `VECTOR_BACKEND` env flag (`chroma | pgvector`); wire `/ask`, `/search`, `/upload`, `/documents` to selected backend
+  - [ ] Re-run `scripts/eval_retrieval.py` against pgvector; confirm parity (recall@5 ≥ 0.60, nDCG@10 ≥ 0.74)
+  - [ ] Remove Chroma code + dependency after parity confirmed
+- [ ] Add `chunks` table: `content`, `content_tsv` (tsvector), `embedding vector(1536)` + Alembic migration
+- [ ] `LexicalRetriever` (Postgres FTS via `websearch_to_tsquery` + `ts_rank_cd`)
+- [ ] `SemanticRetriever` (pgvector cosine)
+- [ ] **RRF fusion** as a pure, unit-tested function
+- [ ] `RETRIEVAL_MODE` env var: `semantic | lexical | hybrid` for A/B
+- [ ] Benchmark all three modes; document where each wins
+
+## Phase 8 — Reranking
+
+- [ ] Add cross-encoder reranker (`bge-reranker-v2-m3` local **or** Cohere Rerank)
+- [ ] Pipeline: hybrid top 50 → rerank → top 5
+- [ ] Re-run benchmark, compare nDCG@10 with/without rerank
+- [ ] Note bi-encoder vs cross-encoder tradeoffs in `RESOURCES.md`
+
+## Phase 9 — Query Understanding
+
+- [ ] LLM **query rewriting** (history-aware, for conversational `/ask`)
+- [ ] **HyDE** toggle (hypothetical document embeddings)
+- [ ] **Multi-query expansion** (3 paraphrases → union before fusion)
+- [ ] Metadata filter extraction from natural language (e.g. dates, doc types)
+- [ ] Benchmark each variant individually
+
+## Phase 10 — Indexing Improvements
+
+- [ ] **Contextual chunking** (Anthropic-style): prepend LLM-generated chunk context before embedding
+- [ ] **Parent-document / small-to-big**: embed small chunks, return parent at retrieval (`parent_id` column)
+- [ ] Sweep chunk size (200 / 400 / 800) and overlap (0% / 10% / 20%) via benchmark
+
+## Phase 11 — Parameter Calibration
+
+- [ ] Sweep runner: hybrid α (or RRF k), top-K per retriever, rerank N, chunk size
+- [ ] Output CSV/JSON to `benchmark/results/sweeps/`
+- [ ] Pareto frontier report: quality vs latency vs cost
+- [ ] Pick + commit defaults backed by numbers
+
+## Phase 12 — Observability & Feedback Loop
+
+- [ ] Per-stage latency & cost logging (retrieve / rerank / generate) in `messages` table
+- [ ] `/feedback` endpoint (thumbs up/down) → store on message row
+- [ ] Failing-query → golden-set feedback loop (auto-promote thumbs-down to eval set)
+
+---
+
+# Part D — Production Hardening
+
+## Phase 13 — Production Hardening
 
 - [ ] Rate limiting & input validation
 - [ ] Background job processing for document ingestion (FastAPI BackgroundTasks)
