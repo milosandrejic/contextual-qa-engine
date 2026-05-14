@@ -38,6 +38,14 @@ async def store_chunks(chunks: list[dict], document_id: uuid.UUID) -> int:
     async with async_session() as session:
         session.add_all(rows)
         await session.commit()
+        # Populate the tsvector column for lexical search.
+        await session.execute(
+            sa.text(
+                "UPDATE chunks SET content_tsv = to_tsvector('english', content) "
+                "WHERE content_tsv IS NULL"
+            )
+        )
+        await session.commit()
 
     return len(rows)
 
@@ -76,6 +84,46 @@ async def search_chunks(query: str, top_k: int = 5) -> list[dict]:
                 "chunk_index": row.chunk_index,
             },
             "distance": float(row.distance),
+        }
+        for row in rows
+    ]
+
+
+async def search_chunks_lexical(query: str, top_k: int = 5) -> list[dict]:
+    """Return top-k chunks by full-text search rank (BM25-style).
+
+    Uses websearch_to_tsquery for natural query parsing (handles quoted phrases,
+    OR, -, etc.) and ts_rank_cd for cover-density ranking.
+    Distance is returned as 1 - rank so lower = better (consistent with cosine).
+    """
+    sql = sa.text(
+        """
+        SELECT
+            content,
+            source,
+            page,
+            chunk_index,
+            ts_rank_cd(content_tsv, query) AS rank
+        FROM chunks, websearch_to_tsquery('english', :query) query
+        WHERE content_tsv @@ query
+        ORDER BY rank DESC
+        LIMIT :top_k
+        """
+    )
+
+    async with async_session() as session:
+        result = await session.execute(sql, {"query": query, "top_k": top_k})
+        rows = result.fetchall()
+
+    return [
+        {
+            "text": row.content,
+            "metadata": {
+                "source": row.source,
+                "page": row.page,
+                "chunk_index": row.chunk_index,
+            },
+            "distance": 1.0 - float(row.rank),
         }
         for row in rows
     ]

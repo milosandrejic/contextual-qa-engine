@@ -112,9 +112,8 @@
   - [x] Add `VECTOR_BACKEND` env flag (`chroma | pgvector`); wire `/ask`, `/search`, `/upload`, `/documents` to selected backend
   - [x] Re-run `scripts/eval_retrieval.py` against pgvector; confirm parity (recall@5 ≥ 0.60, nDCG@10 ≥ 0.74)
   - [x] Remove Chroma code + dependency after parity confirmed
-- [ ] Add `chunks` table: `content`, `content_tsv` (tsvector), `embedding vector(1536)` + Alembic migration
-- [ ] `LexicalRetriever` (Postgres FTS via `websearch_to_tsquery` + `ts_rank_cd`)
-- [ ] `SemanticRetriever` (pgvector cosine)
+- [x] `LexicalRetriever` (Postgres FTS via `websearch_to_tsquery` + `ts_rank_cd`)
+- [x] `SemanticRetriever` (pgvector cosine)
 - [ ] **RRF fusion** as a pure, unit-tested function
 - [ ] `RETRIEVAL_MODE` env var: `semantic | lexical | hybrid` for A/B
 - [ ] Benchmark all three modes; document where each wins
