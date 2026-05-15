@@ -14,6 +14,45 @@ Avoid:
 - Heavily formatted reports with tables / figures (garbled extraction)
 - Novels / narrative prose (hard to write fact-based benchmark questions)
 
+## Retrieval architecture: bi-encoder vs cross-encoder
+
+The retrieval pipeline uses two fundamentally different model architectures in sequence.
+
+### Bi-encoder (embedding retrieval)
+`text-embedding-3-small` encodes the query and each document chunk **independently**
+into fixed-size vectors. Retrieval is a nearest-neighbour search over those vectors.
+
+- **Speed**: ~10ms for ANN lookup over millions of chunks (HNSW index)
+- **Scalability**: embeddings are computed once at index time; query is one forward pass
+- **Weakness**: query and document never directly interact. The model sees each in
+  isolation, so subtle relevance signals (specific phrasing, negation, exact number
+  matches) get averaged out into the vector. Two chunks with similar topics but
+  different answers get similar embeddings.
+
+### Cross-encoder (Cohere reranker)
+`rerank-english-v3.0` receives the **concatenated (query, chunk) pair** as a single
+input and computes a relevance score via full transformer attention over both together.
+
+- **Accuracy**: joint attention means the model can detect that a specific sentence in
+  the chunk directly answers the specific phrasing of the query — far more precise
+  than vector similarity
+- **Speed**: ~300–500ms per API call; cannot scale to the full corpus (must pre-filter)
+- **Why it works after bi-encoder**: we use the fast bi-encoder to narrow from N chunks
+  to 20 candidates, then the accurate cross-encoder to pick the best 5. Each stage does
+  what it's good at.
+
+### Cohere API limits (trial key)
+- 10 calls/minute on the trial tier
+- Upgrade to a Production key at https://dashboard.cohere.com/api-keys for higher limits
+- The eval script adds an 8s delay between calls to stay within the trial rate limit
+  (see `RERANK_RATE_LIMIT_DELAY` in `scripts/eval_retrieval.py`)
+
+### Phase 8 benchmark result
+Switching from hybrid RRF alone → hybrid RRF + Cohere reranking improved nDCG@10
+from **0.7499 → 0.8678** (+11.8pp). Full results in [benchmark/BENCHMARK.md](benchmark/BENCHMARK.md).
+
+---
+
 ## Free sources
 
 | Source | What's there |

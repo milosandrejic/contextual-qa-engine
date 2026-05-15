@@ -123,10 +123,10 @@
 
 ## Phase 8 — Reranking
 
-- [ ] Add cross-encoder reranker (`bge-reranker-v2-m3` local **or** Cohere Rerank)
-- [ ] Pipeline: hybrid top 50 → rerank → top 5
-- [ ] Re-run benchmark, compare nDCG@10 with/without rerank
-- [ ] Note bi-encoder vs cross-encoder tradeoffs in `RESOURCES.md`
+- [x] Add cross-encoder reranker (Cohere `rerank-english-v3.0` via API)
+- [x] Pipeline: hybrid top 20 → rerank → top 5
+- [x] Re-run benchmark, compare nDCG@10 with/without rerank
+- [x] Note bi-encoder vs cross-encoder tradeoffs in `RESOURCES.md`
 
 ## Phase 9 — Query Understanding
 

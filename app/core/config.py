@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     database_url: str = ""
     retrieval_mode: str = "hybrid"  # "semantic" | "lexical" | "hybrid"
     max_history_messages: int = 20
+
+    cohere_api_key: str = ""
+    reranker_model: str = "rerank-english-v3.0"
+    reranker_candidate_k: int = 20  # candidate pool fetched before reranking
     cors_allow_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
     langsmith_tracing: bool = False
     langsmith_api_key: str | None = None

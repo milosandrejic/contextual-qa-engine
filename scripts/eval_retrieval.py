@@ -31,6 +31,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.services.pg_vector_store import get_retriever
+from app.services.reranker import rerank_chunks
+
+RERANK_RATE_LIMIT_DELAY = 8.0  # seconds — Cohere trial: 10 calls/min → 1 per 6s; 8s gives headroom
 from app.services.prompt import build_context
 from app.services.llm import generate_answer
 from benchmark.metrics import compute_retrieval_metrics, aggregate_metrics
@@ -49,12 +52,14 @@ async def run_retrieval_eval(
     top_k: int,
     include_ragas: bool,
     mode: str = "hybrid",
+    rerank: bool = False,
+    reranker_candidate_k: int = 50,
 ) -> dict:
     per_query_retrieval: list[dict] = []
     ragas_samples: list[dict] = []
 
     retrieve = get_retriever(mode)
-    print(f"Running evaluation on {len(golden_set)} questions (top_k={top_k}, mode={mode})...")
+    print(f"Running evaluation on {len(golden_set)} questions (top_k={top_k}, mode={mode}, rerank={rerank})...")
 
     for i, item in enumerate(golden_set, start=1):
         question = item["question"]
@@ -62,7 +67,13 @@ async def run_retrieval_eval(
 
         print(f"  [{i}/{len(golden_set)}] {question[:70]}...")
 
-        retrieved = await retrieve(query=question, top_k=top_k)
+        if rerank:
+            candidates = await retrieve(query=question, top_k=reranker_candidate_k)
+            retrieved = await asyncio.to_thread(rerank_chunks, question, candidates, top_k)
+            # Cohere trial key: 10 calls/min. Sleep to avoid 429s.
+            await asyncio.sleep(RERANK_RATE_LIMIT_DELAY)
+        else:
+            retrieved = await retrieve(query=question, top_k=top_k)
         metrics = compute_retrieval_metrics(retrieved=retrieved, expected=expected)
         per_query_retrieval.append({"id": item["id"], **metrics})
 
@@ -81,6 +92,7 @@ async def run_retrieval_eval(
     report = {
         "run_at": datetime.now(timezone.utc).isoformat(),
         "retrieval_mode": mode,
+        "rerank": rerank,
         "top_k": top_k,
         "num_questions": len(golden_set),
         "retrieval_metrics": retrieval_summary,
@@ -143,6 +155,17 @@ def main() -> None:
         choices=["semantic", "lexical", "hybrid"],
         help="Retrieval mode to benchmark (default: hybrid)",
     )
+    parser.add_argument(
+        "--rerank",
+        action="store_true",
+        help="Enable Cohere reranker after retrieval (requires COHERE_API_KEY)",
+    )
+    parser.add_argument(
+        "--reranker-candidate-k",
+        type=int,
+        default=20,
+        help="Candidate pool size before reranking (default: 20)",
+    )
     args = parser.parse_args()
 
     golden_set = load_golden_set(args.golden_set)
@@ -152,6 +175,8 @@ def main() -> None:
         top_k=args.top_k,
         include_ragas=args.ragas,
         mode=args.mode,
+        rerank=args.rerank,
+        reranker_candidate_k=args.reranker_candidate_k,
     ))
 
     out_path = save_report(report)
