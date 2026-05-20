@@ -3,7 +3,6 @@ from pydantic import BaseModel
 from app.core.config import settings
 from app.services.pg_vector_store import get_retriever
 from app.services.reranker import rerank_chunks
-from app.utils.scoring import cohere_distance_to_relevance_percent
 import asyncio
 
 router = APIRouter()
@@ -24,7 +23,7 @@ async def search_documents(request: SearchRequest):
         {
             "text": chunk["text"],
             "metadata": chunk["metadata"],
-            "relevance": cohere_distance_to_relevance_percent(chunk["distance"]),
+            "relevance": round(chunk["score"] * 100),
         }
         for chunk in chunks
     ]

@@ -40,13 +40,13 @@ def rerank_chunks(query: str, chunks: list[dict], top_k: int) -> list[dict]:
         query:   The user's question (or history-aware query) — same string
                  used for retrieval so the reranker scores against the same intent.
         chunks:  Candidate chunks from retrieval (typically 50).
-                 Each chunk has {text, metadata: {source, page, chunk_index}, distance}.
+                 Each chunk has {text, metadata: {source, page, chunk_index}, score}.
         top_k:   Number of chunks to return after reranking.
 
     Returns:
         top_k chunks sorted by descending Cohere relevance score.
-        The ``distance`` field is replaced with ``1 - relevance_score`` so that
-        lower = better, consistent with the rest of the pipeline.
+        The ``score`` field is set to Cohere's raw ``relevance_score`` (0..1,
+        higher = better, calibrated across queries).
     """
     if not chunks:
         return chunks
@@ -63,9 +63,7 @@ def rerank_chunks(query: str, chunks: list[dict], top_k: int) -> list[dict]:
     return [
         {
             **chunks[result.index],
-            # relevance_score is 0–1 (higher = more relevant).
-            # Invert to distance convention: lower = better.
-            "distance": 1.0 - result.relevance_score,
+            "score": result.relevance_score,
         }
         for result in response.results
     ]

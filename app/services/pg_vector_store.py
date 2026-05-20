@@ -6,7 +6,12 @@ from app.core.database import async_session
 from app.models.chunk import Chunk
 from app.services.embedding import get_embedding, get_embeddings
 
-# A chunk is a dict with shape: {text, metadata: {source, page, chunk_index}, distance}
+# A chunk is a dict with shape: {text, metadata: {source, page, chunk_index}, score}
+# `score` is always higher = better. Its scale depends on the retriever:
+#   - semantic: 0..1 (1 = identical, derived from cosine distance)
+#   - lexical:  raw ts_rank_cd (unbounded, only meaningful within one result list)
+#   - rrf:      raw RRF score (unbounded, only meaningful within one result list)
+#   - rerank:   0..1 (Cohere relevance_score, calibrated across queries)
 ChunkDict = dict
 
 PG_EMBED_BATCH_SIZE = 500
@@ -55,7 +60,11 @@ async def store_chunks(chunks: list[dict], document_id: uuid.UUID) -> int:
 
 
 async def search_chunks(query: str, top_k: int = 5) -> list[dict]:
-    """Return top-k chunks by cosine similarity to the query embedding."""
+    """Return top-k chunks by cosine similarity to the query embedding.
+
+    pgvector's `<=>` operator returns cosine distance in [0, 2].
+    We convert to a score in [0, 1] (higher = better) by `1 - distance / 2`.
+    """
     query_embedding = get_embedding(query)
 
     sql = sa.text(
@@ -87,7 +96,7 @@ async def search_chunks(query: str, top_k: int = 5) -> list[dict]:
                 "page": row.page,
                 "chunk_index": row.chunk_index,
             },
-            "distance": float(row.distance),
+            "score": 1.0 - float(row.distance) / 2.0,
         }
         for row in rows
     ]
@@ -98,7 +107,8 @@ async def search_chunks_lexical(query: str, top_k: int = 5) -> list[dict]:
 
     Uses websearch_to_tsquery for natural query parsing (handles quoted phrases,
     OR, -, etc.) and ts_rank_cd for cover-density ranking.
-    Distance is returned as 1 - rank so lower = better (consistent with cosine).
+    Score is the raw ts_rank_cd value (higher = better). Unbounded; only
+    meaningful for ordering within this result list.
     """
     sql = sa.text(
         """
@@ -127,7 +137,7 @@ async def search_chunks_lexical(query: str, top_k: int = 5) -> list[dict]:
                 "page": row.page,
                 "chunk_index": row.chunk_index,
             },
-            "distance": 1.0 - float(row.rank),
+            "score": float(row.rank),
         }
         for row in rows
     ]
@@ -142,32 +152,43 @@ def _chunk_key(chunk: ChunkDict) -> tuple:
     return (m.get("source"), m.get("page"), m.get("chunk_index"))
 
 
-def rrf_fuse(results_lists: list[list[ChunkDict]], k: int = RRF_K) -> list[ChunkDict]:
+def rrf_fuse(
+    results_lists: list[list[ChunkDict]],
+    weights: list[float] | None = None,
+    k: int = RRF_K,
+) -> list[ChunkDict]:
     """Fuse ranked result lists with Reciprocal Rank Fusion.
 
-    Score per chunk: sum(1 / (k + rank_i)) across every retriever that returned it.
-    Rank-based, so cosine distances and ts_rank_cd values need no normalisation.
-    Returns chunks sorted by descending RRF score; distance = 1/score (lower = better).
+    Score per chunk: sum(w_i / (k + rank_i)) across every retriever that returned it.
+    Rank-based, so per-retriever score scales don't need normalisation.
+    Returns chunks sorted by descending RRF score; score is the raw RRF sum
+    (higher = better, unbounded, only meaningful within this list).
     """
+    if weights is None:
+        weights = [1.0] * len(results_lists)
+
     # Step 1: accumulate RRF scores and deduplicate chunks across all retrievers.
     # Each chunk is identified by (source, page, chunk_index). If the same chunk
     # appears in multiple retrievers, its score grows — that's the whole point of RRF.
     rrf_scores: dict[tuple, float] = {}
     seen_chunks: dict[tuple, ChunkDict] = {}
 
-    for result_list in results_lists:
+    for result_list, retriever_weight in zip(results_lists, weights):
         for rank, chunk in enumerate(result_list, start=1):
             key = _chunk_key(chunk)
-            rrf_scores[key] = rrf_scores.get(key, 0.0) + 1.0 / (k + rank)
+            previous_score = rrf_scores.get(key, 0.0)
+
+            rank_contribution = retriever_weight / (k + rank)
+            rrf_scores[key] = previous_score + rank_contribution
+
             if key not in seen_chunks:
                 seen_chunks[key] = chunk
 
-    # Step 2: sort by descending RRF score and attach distance.
-    # Distance is inverted (1/score) so lower = better, consistent with cosine distance.
+    # Step 2: sort by descending RRF score and attach it to each chunk.
     ranked_keys = sorted(rrf_scores, key=rrf_scores.__getitem__, reverse=True)
 
     return [
-        {**seen_chunks[key], "distance": 1.0 / rrf_scores[key]}
+        {**seen_chunks[key], "score": rrf_scores[key]}
         for key in ranked_keys
     ]
 
@@ -182,7 +203,8 @@ async def search_chunks_hybrid(query: str, top_k: int = 5) -> list[ChunkDict]:
         search_chunks(query=query, top_k=top_k * 2),
         search_chunks_lexical(query=query, top_k=top_k * 2),
     )
-    return rrf_fuse([semantic, lexical])[:top_k]
+
+    return rrf_fuse([semantic, lexical], weights=[1.0, 1.0])[:top_k]
 
 
 _RETRIEVERS = {

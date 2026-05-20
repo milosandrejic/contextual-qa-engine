@@ -12,7 +12,6 @@ from app.services.reranker import rerank_chunks
 from app.services.prompt import build_context
 from app.services.llm import generate_answer
 from app.services.query_builder import build_history_aware_query
-from app.utils.scoring import cohere_distance_to_relevance_percent
 
 router = APIRouter()
 
@@ -77,7 +76,7 @@ async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
             "source": chunk["metadata"].get("source"),
             "page": chunk["metadata"].get("page"),
             "chunk_index": chunk["metadata"].get("chunk_index"),
-            "relevance": cohere_distance_to_relevance_percent(chunk["distance"]),
+            "relevance": round(chunk["score"] * 100),
         }
         for index, chunk in enumerate(chunks, start=1)
     ]
