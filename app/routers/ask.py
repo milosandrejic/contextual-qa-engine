@@ -12,6 +12,8 @@ from app.services.reranker import rerank_chunks
 from app.services.prompt import build_context
 from app.services.llm import generate_answer
 from app.services.query_builder import build_history_aware_query
+from app.services.types import HistoryMessage, Source
+from app.routers.schemas import AskResponse
 
 router = APIRouter()
 
@@ -20,8 +22,8 @@ class AskRequest(BaseModel):
     top_k: int = 3
     session_id: uuid.UUID | None = None
 
-@router.post("/ask")
-async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
+@router.post("/ask", response_model=AskResponse)
+async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)) -> AskResponse:
     """Ask a question with optional session context and message persistence.
     
     Retrieves session history if session_id provided, performs vector search with
@@ -32,19 +34,18 @@ async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
         db: AsyncSession for database operations.
     
     Returns:
-        Dict with question, session_id, answer, sources (with citation numbers and metadata),
-        and token usage.
+        AskResponse with question, session_id, answer, sources, and token usage.
     
     Raises:
         HTTPException: 404 if session_id provided but not found.
     """
-    history: list[dict] = []
+    history: list[HistoryMessage] = []
 
     started_at = time.perf_counter()
 
     if request.session_id:
         session = await chat_history.get_session(db, request.session_id)
-
+        
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
 
@@ -69,17 +70,18 @@ async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
     
     latency_ms = int((time.perf_counter() - started_at) * 1000)
 
-    sources = [
-        {
+    sources: list[Source] = []
+
+    for index, chunk in enumerate(chunks, start=1):
+        metadata = chunk["metadata"]
+        sources.append({
             "citation": index,
             "text": chunk["text"],
-            "source": chunk["metadata"].get("source"),
-            "page": chunk["metadata"].get("page"),
-            "chunk_index": chunk["metadata"].get("chunk_index"),
+            "source": metadata["source"],
+            "page": metadata["page"],
+            "chunk_index": metadata["chunk_index"],
             "relevance": round(chunk["score"] * 100),
-        }
-        for index, chunk in enumerate(chunks, start=1)
-    ]
+        })
 
     if request.session_id:
         await chat_history.add_message(
@@ -99,11 +101,11 @@ async def ask_question(request: AskRequest, db: AsyncSession = Depends(get_db)):
             latency_ms=latency_ms,
         )
 
-    return {
-        "question": request.question,
-        "session_id": request.session_id,
-        "answer": result["answer"],
-        "latency_ms": latency_ms,
-        "sources": sources,
-        "usage": result["usage"],
-    }
+    return AskResponse(
+        question=request.question,
+        session_id=request.session_id,
+        answer=result["answer"],
+        latency_ms=latency_ms,
+        sources=sources,
+        usage=result["usage"],
+    )

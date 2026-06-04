@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.models.session import Session
 from app.models.message import Message
+from app.services.types import HistoryMessage, Source, TokenUsage
 
 
 async def create_session(db: AsyncSession) -> Session:
@@ -80,8 +81,8 @@ async def add_message(
     session_id: uuid.UUID,
     role: str,
     content: str,
-    sources: list[dict] | dict | None = None,
-    token_usage: dict | None = None,
+    sources: list[Source] | None = None,
+    token_usage: TokenUsage | None = None,
     latency_ms: int | None = None,
 ) -> Message:
     """Add a message to a session.
@@ -91,8 +92,8 @@ async def add_message(
         session_id: UUID of the session to add message to.
         role: Message role ('user' or 'assistant').
         content: Message text content.
-        sources: Optional list/dict of source citations.
-        token_usage: Optional dict with token usage metrics.
+        sources: Optional list of source citations.
+        token_usage: Optional token usage metrics.
         latency_ms: Optional latency in milliseconds.
     
     Returns:
@@ -118,7 +119,7 @@ async def get_session_history(
     db: AsyncSession,
     session_id: uuid.UUID,
     limit: int | None = None,
-) -> list[dict]:
+) -> list[HistoryMessage]:
     """Fetch recent messages from a session in chronological order.
     
     Fetches the most recent N messages efficiently (DESC + LIMIT), then restores
@@ -130,7 +131,7 @@ async def get_session_history(
         limit: Max number of messages to return. If None or <=0, returns all.
     
     Returns:
-        List of message dicts with 'role' and 'content' keys, oldest first.
+        List of HistoryMessage entries, oldest first.
     """
     query = (
         select(Message)
@@ -146,4 +147,8 @@ async def get_session_history(
     
     messages = list(reversed(messages_desc))
 
-    return [{"role": msg.role, "content": msg.content} for msg in messages]
+    history: list[HistoryMessage] = [
+        {"role": msg.role, "content": msg.content} for msg in messages
+    ]
+
+    return history

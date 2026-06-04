@@ -17,6 +17,7 @@ zero GPU requirement and no model download.
 
 import cohere
 from app.core.config import settings
+from app.services.types import Chunk
 
 # Module-level client — initialised once, reused across requests.
 _client: cohere.Client | None = None
@@ -33,7 +34,7 @@ def _get_client() -> cohere.Client:
     return _client
 
 
-def rerank_chunks(query: str, chunks: list[dict], top_k: int) -> list[dict]:
+def rerank_chunks(query: str, chunks: list[Chunk], top_k: int) -> list[Chunk]:
     """Rerank a candidate pool of chunks using Cohere's cross-encoder.
 
     Args:
@@ -60,10 +61,14 @@ def rerank_chunks(query: str, chunks: list[dict], top_k: int) -> list[dict]:
         top_n=top_k,
     )
 
-    return [
-        {
-            **chunks[result.index],
+    reranked: list[Chunk] = []
+
+    for result in response.results:
+        original = chunks[result.index]
+        reranked.append({
+            "text": original["text"],
+            "metadata": original["metadata"],
             "score": result.relevance_score,
-        }
-        for result in response.results
-    ]
+        })
+
+    return reranked

@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.routers import upload, search, ask, session, documents
+from app.routers.schemas import HealthResponse
 
 app = FastAPI(title=settings.app_name)
 
@@ -20,6 +21,6 @@ app.include_router(session.router)
 app.include_router(documents.router)
 
 
-@app.get("/health")
-def health_check():
-    return {"status": "ok"}
+@app.get("/health", response_model=HealthResponse)
+def health_check() -> HealthResponse:
+    return HealthResponse(status="ok")

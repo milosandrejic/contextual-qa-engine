@@ -1,3 +1,5 @@
+from app.services.types import Chunk, HistoryMessage
+
 SYSTEM_PROMPT = """You are a helpful assistant that answers questions based on the provided context.
 
 Rules:
@@ -14,14 +16,14 @@ Context:
 {context}"""
 
 
-def build_context(chunks: list[dict]) -> str:
+def build_context(chunks: list[Chunk]) -> str:
     """Format ranked search results into a numbered context string for the LLM.
     
     Each chunk is numbered [1], [2], etc., with source and page info in header.
     Chunks are separated by visual dividers (---) for clarity.
     
     Args:
-        chunks: List of dicts with 'text', 'metadata' keys from vector search.
+        chunks: List of ranked chunks from vector search.
     
     Returns:
         Formatted context string ready for LLM prompts.
@@ -30,8 +32,8 @@ def build_context(chunks: list[dict]) -> str:
 
     for index, chunk in enumerate(chunks, start=1):
         metadata = chunk["metadata"]
-        source_name = metadata.get("source", "unknown")
-        page_number = metadata.get("page")
+        source_name = metadata["source"] or "unknown"
+        page_number = metadata["page"]
 
         context_header = f"[{index}] [Source: {source_name}"
 
@@ -46,7 +48,11 @@ def build_context(chunks: list[dict]) -> str:
     return "\n\n---\n\n".join(formatted_chunks)
 
 
-def build_messages(context: str, question: str, history: list[dict] | None = None) -> list[dict]:
+def build_messages(
+    context: str,
+    question: str,
+    history: list[HistoryMessage] | None = None,
+) -> list[HistoryMessage]:
     """Build a message list for API calls (system + history + user question).
     
     Injects formatted context into system prompt. Replays prior messages only if their
@@ -55,17 +61,23 @@ def build_messages(context: str, question: str, history: list[dict] | None = Non
     Args:
         context: Formatted context string from build_context().
         question: User's question to append.
-        history: Optional list of prior message dicts with 'role' and 'content'.
+        history: Optional list of prior history messages.
     
     Returns:
-        List of message dicts ready for LLM APIs.
+        List of messages ready for LLM APIs.
     """
-    messages = [{"role": "system", "content": SYSTEM_PROMPT.format(context=context)}]
+    system_message: HistoryMessage = {
+        "role": "system",
+        "content": SYSTEM_PROMPT.format(context=context),
+    }
+
+    messages: list[HistoryMessage] = [system_message]
 
     if history:
-        valid_messages = [msg for msg in history if msg.get("role") in {"user", "assistant"}]
+        valid_messages = [msg for msg in history if msg["role"] in {"user", "assistant"}]
         messages.extend(valid_messages)
 
-    messages.append({"role": "user", "content": question})
+    user_message: HistoryMessage = {"role": "user", "content": question}
+    messages.append(user_message)
 
     return messages

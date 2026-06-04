@@ -1,4 +1,11 @@
-def build_history_aware_query(question: str, history: list[dict], max_messages: int = 6) -> str:
+from app.services.types import HistoryMessage
+
+
+def build_history_aware_query(
+    question: str,
+    history: list[HistoryMessage],
+    max_messages: int = 6,
+) -> str:
     if not history:
         return question
 
@@ -6,8 +13,8 @@ def build_history_aware_query(question: str, history: list[dict], max_messages: 
     history_lines: list[str] = []
 
     for message in recent_history:
-        role = message.get("role")
-        content = message.get("content")
+        role = message["role"]
+        content = message["content"]
 
         if role in {"user", "assistant"} and content:
             history_lines.append(f"{role}: {content}")

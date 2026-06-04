@@ -1,19 +1,25 @@
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
+# LangChain's public API leaks `Any`/unknown types through prompt templates,
+# Runnable chains, and BaseMessage.content. Relax these checks for this file only.
+
 import os
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
+from pydantic import SecretStr
 from app.core.config import settings
+from app.services.types import HistoryMessage, LLMResult, TokenUsage
 
 
 def _configure_langsmith_tracing() -> None:
     """Enable LangSmith tracing through environment variables when configured."""
-    should_enable_tracing = settings.langsmith_tracing and bool(settings.langsmith_api_key)
+    api_key = settings.langsmith_api_key
 
-    if not should_enable_tracing:
+    if not (settings.langsmith_tracing and api_key):
         return
 
     os.environ["LANGSMITH_TRACING"] = "true"
-    os.environ["LANGSMITH_API_KEY"] = settings.langsmith_api_key
+    os.environ["LANGSMITH_API_KEY"] = api_key
     os.environ["LANGSMITH_PROJECT"] = settings.langsmith_project
     os.environ["LANGSMITH_ENDPOINT"] = settings.langsmith_endpoint
 
@@ -21,7 +27,7 @@ def _configure_langsmith_tracing() -> None:
 _configure_langsmith_tracing()
 
 chat_model = ChatOpenAI(
-    api_key=settings.openai_api_key,
+    api_key=SecretStr(settings.openai_api_key),
     model=settings.openai_model,
     temperature=0.2,
 )
@@ -49,11 +55,13 @@ qa_prompt_template = ChatPromptTemplate.from_messages([
 
 qa_chain = qa_prompt_template | chat_model
 
-def _build_chat_history_messages(history: list[dict] | None) -> list[HumanMessage | AIMessage]:
-    """Convert raw message dicts from database to LangChain message objects.
+def _build_chat_history_messages(
+    history: list[HistoryMessage] | None,
+) -> list[HumanMessage | AIMessage]:
+    """Convert raw history messages from database to LangChain message objects.
     
     Args:
-        history: List of message dicts with 'role' and 'content' keys, or None.
+        history: List of HistoryMessage entries, or None.
     
     Returns:
         List of HumanMessage or AIMessage objects, empty if history is None.
@@ -64,8 +72,8 @@ def _build_chat_history_messages(history: list[dict] | None) -> list[HumanMessag
     messages: list[HumanMessage | AIMessage] = []
 
     for message in history:
-        role = message.get("role")
-        content = message.get("content")
+        role = message["role"]
+        content = message["content"]
 
         if not content:
             continue
@@ -78,7 +86,11 @@ def _build_chat_history_messages(history: list[dict] | None) -> list[HumanMessag
     return messages
 
 
-def generate_answer(context: str, question: str, history: list[dict] | None = None) -> dict:
+def generate_answer(
+    context: str,
+    question: str,
+    history: list[HistoryMessage] | None = None,
+) -> LLMResult:
     """Generate an answer using LangChain's RAG chain with chat history.
     
     Invokes the QA chain with context, question, and formatted history.
@@ -87,10 +99,10 @@ def generate_answer(context: str, question: str, history: list[dict] | None = No
     Args:
         context: Formatted context string with citations for the LLM.
         question: User's question to answer.
-        history: Optional list of prior message dicts for conversation context.
+        history: Optional list of prior history messages for conversation context.
     
     Returns:
-        Dict with 'answer' string and 'usage' dict (prompt_tokens, completion_tokens, total_tokens).
+        LLMResult with the answer string and token usage metrics.
     """
     response = qa_chain.invoke({
         "context": context,
@@ -98,22 +110,28 @@ def generate_answer(context: str, question: str, history: list[dict] | None = No
         "history": _build_chat_history_messages(history),
     })
 
+    raw_content = response.content
+    assert isinstance(raw_content, str), "LangChain chat models must return string content"
+    answer = raw_content
+
     prompt_tokens = 0
     completion_tokens = 0
     total_tokens = 0
 
-    has_usage_metadata = hasattr(response, "usage_metadata") and response.usage_metadata
+    usage_metadata = getattr(response, "usage_metadata", None)
 
-    if has_usage_metadata:
-        prompt_tokens = response.usage_metadata.get("input_tokens", 0)
-        completion_tokens = response.usage_metadata.get("output_tokens", 0)
-        total_tokens = response.usage_metadata.get("total_tokens", 0)
+    if usage_metadata:
+        prompt_tokens = int(usage_metadata.get("input_tokens", 0))
+        completion_tokens = int(usage_metadata.get("output_tokens", 0))
+        total_tokens = int(usage_metadata.get("total_tokens", 0))
+
+    usage: TokenUsage = {
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": total_tokens,
+    }
 
     return {
-        "answer": response.content,
-        "usage": {
-            "prompt_tokens": prompt_tokens,
-            "completion_tokens": completion_tokens,
-            "total_tokens": total_tokens,
-        },
+        "answer": answer,
+        "usage": usage,
     }

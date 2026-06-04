@@ -1,4 +1,5 @@
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from app.services.types import ChunkInput, ChunkMetadata
 
 
 def chunk_text(
@@ -7,7 +8,7 @@ def chunk_text(
     chunk_size: int = 500,
     overlap: int = 50,
     page: int | None = None,
-) -> list[dict]:
+) -> list[ChunkInput]:
     """Split text into overlapping chunks with metadata.
     
     Uses RecursiveCharacterTextSplitter to maintain semantic coherence.
@@ -30,20 +31,21 @@ def chunk_text(
 
     split_chunks = splitter.split_text(text)
 
-    chunks: list[dict] = []
+    chunks: list[ChunkInput] = []
 
     for index, content in enumerate(split_chunks):
         if not content.strip():
             continue
 
-        chunk_dict = {
-            "text": content,
-            "metadata": {
-                "source": source,
-                "chunk_index": index,
-                "page": page,
-            },
+        metadata: ChunkMetadata = {
+            "source": source,
+            "page": page,
+            "chunk_index": index,
         }
-        chunks.append(chunk_dict)
+        chunk: ChunkInput = {
+            "text": content,
+            "metadata": metadata,
+        }
+        chunks.append(chunk)
 
     return chunks

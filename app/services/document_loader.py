@@ -1,4 +1,5 @@
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
+from app.services.types import PdfPage
 
 
 def load_txt(file_path: str) -> str:
@@ -16,7 +17,7 @@ def load_txt(file_path: str) -> str:
     return "\n".join(doc.page_content for doc in documents)
 
 
-def load_pdf(file_path: str) -> list[dict]:
+def load_pdf(file_path: str) -> list[PdfPage]:
     """Load and extract text from a PDF file, page by page.
     
     Skips empty pages. Increments page numbers by 1 (PDFs are 0-indexed).
@@ -25,11 +26,11 @@ def load_pdf(file_path: str) -> list[dict]:
         file_path: Absolute path to the PDF file.
     
     Returns:
-        List of dicts with 'text' and 'page' keys for non-empty pages.
+        List of PdfPage entries for non-empty pages.
     """
     loader = PyPDFLoader(file_path)
     documents = loader.load()
-    pages: list[dict] = []
+    pages: list[PdfPage] = []
 
     for doc in documents:
         text = doc.page_content or ""
@@ -38,10 +39,10 @@ def load_pdf(file_path: str) -> list[dict]:
             continue
 
         page_number = int(doc.metadata.get("page", 0)) + 1
-        page_dict = {
+        page: PdfPage = {
             "text": text,
             "page": page_number,
         }
-        pages.append(page_dict)
+        pages.append(page)
 
     return pages

@@ -1,4 +1,3 @@
-import asyncio
 import json
 import shutil
 from pathlib import Path
@@ -9,6 +8,8 @@ from app.services.document_loader import load_txt, load_pdf
 from app.services.chunker import chunk_text
 from app.services.pg_vector_store import store_chunks
 from app.services import document as document_service
+from app.services.types import ChunkInput
+from app.routers.schemas import UploadResponse
 
 router = APIRouter()
 
@@ -21,11 +22,11 @@ CHUNKS_DIR.mkdir(parents=True, exist_ok=True)
 ALLOWED_EXTENSIONS = {".txt", ".pdf"}
 
 
-@router.post("/upload")
+@router.post("/upload", response_model=UploadResponse)
 async def upload_document(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-):
+) -> UploadResponse:
     """Upload and process a document (.txt or .pdf).
 
     Validates file type, saves to disk, extracts and chunks text, stores chunks
@@ -57,6 +58,7 @@ async def upload_document(
 
     file_size = file_path.stat().st_size
     page_count: int | None = None
+    chunks: list[ChunkInput] = []
 
     try:
         if ext == ".txt":
@@ -74,7 +76,6 @@ async def upload_document(
                 raise HTTPException(status_code=400, detail="PDF has no extractable text.")
 
             page_count = len(pages)
-            chunks = []
 
             for page in pages:
                 page_chunks = chunk_text(
@@ -104,13 +105,13 @@ async def upload_document(
 
     stored = await store_chunks(chunks, document.id)
 
-    return {
-        "id": document.id,
-        "filename": document.filename,
-        "file_size": document.file_size,
-        "page_count": document.page_count,
-        "chunk_count": document.chunk_count,
-        "indexed_at": document.indexed_at,
-        "stored_in_vector_db": stored,
-        "chunks_file": str(chunks_file),
-    }
+    return UploadResponse(
+        id=document.id,
+        filename=document.filename,
+        file_size=document.file_size,
+        page_count=document.page_count,
+        chunk_count=document.chunk_count,
+        indexed_at=document.indexed_at,
+        stored_in_vector_db=stored,
+        chunks_file=str(chunks_file),
+    )
